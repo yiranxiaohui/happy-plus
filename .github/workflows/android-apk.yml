@@ -72,6 +72,20 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --filter "happy-app..." --no-frozen-lockfile
 
+      - name: Determine Gradle variant
+        run: |
+          # expo-dev-client makes any *debug* build boot into the dev-server
+          # launcher screen instead of the app. Only a *release* build embeds
+          # the JS bundle and launches straight into Happy. Keep development on
+          # debug (devs connect to metro); ship every other env as release.
+          if [ "$APP_ENV" = "development" ]; then
+            echo "GRADLE_TASK=assembleDebug" >> "$GITHUB_ENV"
+            echo "BUILD_TYPE=debug" >> "$GITHUB_ENV"
+          else
+            echo "GRADLE_TASK=assembleRelease" >> "$GITHUB_ENV"
+            echo "BUILD_TYPE=release" >> "$GITHUB_ENV"
+          fi
+
       - name: Expo prebuild (generate android/)
         working-directory: packages/happy-app
         env:
@@ -88,7 +102,7 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Build APK (assembleDebug)
+      - name: Build APK (${{ env.GRADLE_TASK }})
         working-directory: packages/happy-app/android
         env:
           APP_ENV: ${{ env.APP_ENV }}
@@ -96,7 +110,7 @@ jobs:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
           CMAKE_BUILD_PARALLEL_LEVEL: '2'
         run: |
-          ./gradlew assembleDebug \
+          ./gradlew "$GRADLE_TASK" \
             --no-daemon --max-workers=2 \
             -PreactNativeArchitectures=${{ env.ARCHS }} \
             -Dorg.gradle.jvmargs="-Xmx5g -XX:MaxMetaspaceSize=1g" \
@@ -111,7 +125,7 @@ jobs:
             echo "No APK produced" >&2
             exit 1
           fi
-          NAME="happy-${APP_ENV}-${ARCHS//,/_}-debug.apk"
+          NAME="happy-${APP_ENV}-${ARCHS//,/_}-${BUILD_TYPE}.apk"
           cp "$APK" "artifacts/$NAME"
           ls -la artifacts/
           echo "apk_name=$NAME" >> "$GITHUB_OUTPUT"
