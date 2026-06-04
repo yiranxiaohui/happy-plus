@@ -58,14 +58,16 @@ jobs:
           ORIG_VER=$(jq -r '.version' package.json)
           NEW_VER="${ORIG_VER}${VERSION_SUFFIX}"
           echo "Renaming: happy@${ORIG_VER} -> happy-plus@${NEW_VER}"
-          jq --arg v "$NEW_VER" '
+          REPO_URL="git+https://github.com/${GITHUB_REPOSITORY}.git"
+          jq --arg v "$NEW_VER" --arg repo "$REPO_URL" '
               .name = "happy-plus"
             | .version = $v
             | .bin = { "happy-plus": "./bin/happy.mjs", "happy-plus-mcp": "./bin/happy-mcp.mjs" }
+            | .repository = { type: "git", url: $repo }
             | del(.scripts.prepublishOnly)
           ' package.json > package.json.tmp
           mv package.json.tmp package.json
-          jq '{name, version, bin, scripts}' package.json
+          jq '{name, version, bin, repository, scripts}' package.json
 
       - name: Install workspace dependencies
         run: pnpm install --filter "happy-plus..." --no-frozen-lockfile
