@@ -56,6 +56,13 @@ const DEFAULT_CLAUDE_EFFORT: 'low' | 'medium' | 'high' | 'max' = 'medium';
 export async function runClaude(credentials: Credentials, options: StartOptions = {}): Promise<void> {
     logger.debug(`[CLAUDE] ===== CLAUDE MODE STARTING =====`);
     logger.debug(`[CLAUDE] This is the Claude agent, NOT Gemini`);
+
+    // Happy server is a third-party endpoint from the Claude CLI's POV, so the
+    // 'opus' alias falls back to 4.7. Pin to 4.8 unless explicitly overridden.
+    options.claudeEnvVars = {
+        ANTHROPIC_DEFAULT_OPUS_MODEL: 'claude-opus-4-8',
+        ...options.claudeEnvVars,
+    };
     
     const workingDirectory = process.cwd();
     const sessionTag = randomUUID();
