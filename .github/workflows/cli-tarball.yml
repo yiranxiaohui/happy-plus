@@ -1,0 +1,92 @@
+name: Build CLI tarball (happy-plus)
+
+# Rewrites packages/happy-cli/package.json in-flight to rename the npm
+# package + binary to happy-plus, then pnpm builds and npm packs into a
+# tarball. Uploaded as a workflow artifact, and attached to a GitHub
+# Release when triggered by a cli-plus-v* tag.
+#
+# Install on a target machine with:
+#   npm i -g happy-plus-<version>.tgz
+# Binary command: happy-plus (does not collide with upstream `happy`).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_suffix:
+        description: 'Suffix appended to upstream version, e.g. -plus.0'
+        required: true
+        default: '-plus.0'
+        type: string
+  push:
+    tags:
+      - 'cli-plus-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VERSION_SUFFIX: ${{ github.event.inputs.version_suffix || '-plus.0' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Rename happy-cli package to happy-plus
+        run: |
+          set -e
+          cd packages/happy-cli
+          ORIG_VER=$(jq -r '.version' package.json)
+          NEW_VER="${ORIG_VER}${VERSION_SUFFIX}"
+          echo "Renaming: happy@${ORIG_VER} -> happy-plus@${NEW_VER}"
+          jq --arg v "$NEW_VER" '
+              .name = "happy-plus"
+            | .version = $v
+            | .bin = { "happy-plus": "./bin/happy.mjs", "happy-plus-mcp": "./bin/happy-mcp.mjs" }
+          ' package.json > package.json.tmp
+          mv package.json.tmp package.json
+          jq '{name, version, bin}' package.json
+
+      - name: Install workspace dependencies
+        run: pnpm install --filter "happy-plus..." --no-frozen-lockfile
+
+      - name: Build CLI
+        working-directory: packages/happy-cli
+        run: pnpm build
+
+      - name: Pack tarball
+        id: pack
+        working-directory: packages/happy-cli
+        run: |
+          set -e
+          TGZ=$(npm pack --json | jq -r '.[0].filename')
+          echo "tgz_name=$TGZ" >> "$GITHUB_OUTPUT"
+          echo "tgz_path=packages/happy-cli/$TGZ" >> "$GITHUB_OUTPUT"
+          ls -lh "$TGZ"
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pack.outputs.tgz_name }}
+          path: ${{ steps.pack.outputs.tgz_path }}
+          retention-days: 30
+
+      - name: Attach to GitHub Release (cli-plus-v* tag only)
+        if: startsWith(github.ref, 'refs/tags/cli-plus-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.pack.outputs.tgz_path }}
