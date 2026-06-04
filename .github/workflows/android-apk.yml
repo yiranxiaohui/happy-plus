@@ -1,0 +1,130 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_env:
+        description: 'APP_ENV (controls bundle id via app.config.js)'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+      architectures:
+        description: 'reactNativeArchitectures (comma-separated). Use arm64-v8a for modern phones; full set is armeabi-v7a,arm64-v8a,x86,x86_64'
+        required: true
+        default: 'arm64-v8a'
+        type: string
+  push:
+    tags:
+      - 'apk-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      APP_ENV: ${{ github.event.inputs.app_env || 'development' }}
+      ARCHS: ${{ github.event.inputs.architectures || 'arm64-v8a' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reclaim disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet \
+                      /usr/local/share/boost \
+                      /usr/local/share/powershell \
+                      /usr/local/share/chromium \
+                      /opt/ghc \
+                      /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK + NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0 ndk;26.1.10909125'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --filter "happy-app..." --no-frozen-lockfile
+
+      - name: Expo prebuild (generate android/)
+        working-directory: packages/happy-app
+        env:
+          APP_ENV: ${{ env.APP_ENV }}
+        run: pnpm exec expo prebuild --platform android --no-install --clean
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('packages/happy-app/android/**/*.gradle*', 'packages/happy-app/android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Build APK (assembleDebug)
+        working-directory: packages/happy-app/android
+        env:
+          APP_ENV: ${{ env.APP_ENV }}
+          CI: '1'
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+          CMAKE_BUILD_PARALLEL_LEVEL: '2'
+        run: |
+          ./gradlew assembleDebug \
+            --no-daemon --max-workers=2 \
+            -PreactNativeArchitectures=${{ env.ARCHS }} \
+            -Dorg.gradle.jvmargs="-Xmx5g -XX:MaxMetaspaceSize=1g" \
+            -Dkotlin.daemon.jvmargs="-Xmx1500m"
+
+      - name: Collect APK
+        id: collect
+        run: |
+          mkdir -p artifacts
+          APK=$(find packages/happy-app/android/app/build/outputs/apk -name "*.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "No APK produced" >&2
+            exit 1
+          fi
+          NAME="happy-${APP_ENV}-${ARCHS//,/_}-debug.apk"
+          cp "$APK" "artifacts/$NAME"
+          ls -la artifacts/
+          echo "apk_name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "apk_path=artifacts/$NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.collect.outputs.apk_name }}
+          path: ${{ steps.collect.outputs.apk_path }}
+          retention-days: 30
+
+      - name: Attach to GitHub Release (apk-v* tag only)
+        if: startsWith(github.ref, 'refs/tags/apk-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.collect.outputs.apk_path }}
