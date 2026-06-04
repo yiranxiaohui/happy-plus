@@ -33,7 +33,10 @@ COPY packages/happy-wire ./packages/happy-wire
 COPY packages/happy-server ./packages/happy-server
 
 RUN pnpm --filter @slopus/happy-wire build
-RUN pnpm --filter happy-server-self-host build
+# happy-server-self-host's `build` runs typecheck + bun-bundles a standalone
+# binary that this docker image does not use (runtime is `tsx ./sources/main.ts`).
+# Typecheck also requires the happy-app sources which aren't in this build
+# context, so we skip the build step entirely.
 
 # Stage 3: runtime
 FROM node:20 AS runner
