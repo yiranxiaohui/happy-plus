@@ -56,8 +56,15 @@ jobs:
           set -e
           cd packages/happy-cli
           ORIG_VER=$(jq -r '.version' package.json)
-          NEW_VER="${ORIG_VER}${VERSION_SUFFIX}"
-          echo "Renaming: happy@${ORIG_VER} -> happy-plus@${NEW_VER}"
+          # Tag push: cli-plus-vX.Y.Z drives the published version verbatim.
+          # Manual dispatch: upstream-version + VERSION_SUFFIX.
+          if [[ "$GITHUB_REF" == refs/tags/cli-plus-v* ]]; then
+            NEW_VER="${GITHUB_REF_NAME#cli-plus-v}"
+            echo "Tag-driven: ${GITHUB_REF_NAME} -> happy-plus@${NEW_VER}"
+          else
+            NEW_VER="${ORIG_VER}${VERSION_SUFFIX}"
+            echo "Dispatch-driven: happy@${ORIG_VER} + ${VERSION_SUFFIX} -> happy-plus@${NEW_VER}"
+          fi
           REPO_URL="git+https://github.com/${GITHUB_REPOSITORY}.git"
           jq --arg v "$NEW_VER" --arg repo "$REPO_URL" '
               .name = "happy-plus"
