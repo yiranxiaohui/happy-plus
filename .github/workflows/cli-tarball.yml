@@ -88,10 +88,15 @@ jobs:
         working-directory: packages/happy-cli
         run: |
           set -e
-          TGZ=$(npm pack --json | jq -r '.[0].filename')
+          # pnpm pack rewrites workspace:* deps to concrete versions; npm pack
+          # does not, which makes the resulting tarball uninstallable by npm.
+          pnpm pack
+          TGZ=$(ls happy-plus-*.tgz | head -1)
           echo "tgz_name=$TGZ" >> "$GITHUB_OUTPUT"
           echo "tgz_path=packages/happy-cli/$TGZ" >> "$GITHUB_OUTPUT"
           ls -lh "$TGZ"
+          # Sanity-check no workspace: deps leaked
+          tar -xzOf "$TGZ" package/package.json | jq '.dependencies | with_entries(select(.value | test("workspace:")))'
 
       - name: Upload tarball artifact
         uses: actions/upload-artifact@v4
@@ -111,4 +116,7 @@ jobs:
         working-directory: packages/happy-cli
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public --provenance
+        # pnpm publish reuses the tarball produced by pnpm pack above (matching
+        # the workspace:* rewrites). --no-git-checks skips the clean-tree check
+        # since we're publishing from a tag detached commit.
+        run: pnpm publish --access public --provenance --no-git-checks
