@@ -28,6 +28,10 @@ const STANDARD_TOOLS: Record<string, string> = {
     'TodoWrite': 'Update Tasks',
     'TodoRead': 'Read Tasks',
     'Task': 'Launch Agent',
+    'TaskCreate': 'Create Task',
+    'TaskUpdate': 'Update Task',
+    'TaskGet': 'Read Task',
+    'TaskList': 'List Tasks',
     
     // Web tools
     'WebFetch': 'Fetch Web Page',

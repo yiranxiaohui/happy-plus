@@ -59,8 +59,12 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
 
     // Happy server is a third-party endpoint from the Claude CLI's POV, so the
     // 'opus' alias falls back to 4.7. Pin to 4.8 unless explicitly overridden.
+    // MCP_CONNECTION_NONBLOCKING=0: SDK 0.3.142+ defaults to background MCP
+    // connections (status: "pending"). Force blocking so existing happy-app
+    // MCP status rendering works without changes.
     options.claudeEnvVars = {
         ANTHROPIC_DEFAULT_OPUS_MODEL: 'claude-opus-4-8',
+        MCP_CONNECTION_NONBLOCKING: '0',
         ...options.claudeEnvVars,
     };
     

@@ -410,6 +410,65 @@ export const knownTools = {
             return t('tools.names.todoList');
         },
     },
+    'TaskCreate': {
+        title: (opts: { metadata: Metadata | null, tool: ToolCall }) => {
+            if (typeof opts.tool.input?.subject === 'string') return opts.tool.input.subject;
+            return t('tools.names.todoList');
+        },
+        icon: ICON_TODO,
+        noStatus: true,
+        minimal: true,
+        input: z.object({
+            subject: z.string(),
+            description: z.string(),
+            activeForm: z.string().optional(),
+        }).partial().passthrough(),
+        result: z.object({
+            task: z.object({ id: z.string(), subject: z.string() }).partial().passthrough(),
+        }).partial().passthrough(),
+    },
+    'TaskUpdate': {
+        title: (opts: { metadata: Metadata | null, tool: ToolCall }) => {
+            if (typeof opts.tool.input?.subject === 'string') return opts.tool.input.subject;
+            return t('tools.names.todoList');
+        },
+        icon: ICON_TODO,
+        noStatus: true,
+        minimal: true,
+        input: z.object({
+            taskId: z.string(),
+            subject: z.string().optional(),
+            description: z.string().optional(),
+            activeForm: z.string().optional(),
+            status: z.string().optional(),
+        }).partial().passthrough(),
+        result: z.object({
+            success: z.boolean(),
+            taskId: z.string(),
+            updatedFields: z.array(z.string()),
+        }).partial().passthrough(),
+    },
+    'TaskGet': {
+        title: t('tools.names.todoList'),
+        icon: ICON_TODO,
+        noStatus: true,
+        minimal: true,
+        input: z.object({ taskId: z.string() }).partial().passthrough(),
+    },
+    'TaskList': {
+        title: t('tools.names.todoList'),
+        icon: ICON_TODO,
+        noStatus: true,
+        minimal: true,
+        input: z.object({}).passthrough(),
+        result: z.object({
+            tasks: z.array(z.object({
+                id: z.string(),
+                subject: z.string(),
+                status: z.enum(['pending', 'in_progress', 'completed']),
+            }).partial().passthrough()),
+        }).partial().passthrough(),
+    },
     'WebSearch': {
         title: (opts: { metadata: Metadata | null, tool: ToolCall }) => {
             if (typeof opts.tool.input.query === 'string') {

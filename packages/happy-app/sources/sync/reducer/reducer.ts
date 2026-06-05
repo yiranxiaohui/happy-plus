@@ -155,6 +155,10 @@ export type ReducerState = {
         todos: TodoItem[];
         timestamp: number;
     };
+    // SDK 0.3.142+ replaces TodoWrite with TaskCreate/Update/Get/List. Each
+    // event mutates one task by id, so accumulate state here and re-derive
+    // latestTodos on every Task* event.
+    taskMap?: Map<string, TodoItem>;
     latestUsage?: {
         inputTokens: number;
         outputTokens: number;
@@ -257,6 +261,69 @@ function updateLatestTodos(state: ReducerState, value: unknown, timestamp: numbe
     }
 }
 
+const TASK_STATUSES = new Set(['pending', 'in_progress', 'completed']);
+
+function syncTodosFromTaskMap(state: ReducerState, timestamp: number) {
+    if (!state.taskMap) return;
+    state.latestTodos = {
+        todos: Array.from(state.taskMap.values()),
+        timestamp,
+    };
+}
+
+function handleTaskTool(state: ReducerState, name: string, input: unknown, result: unknown, timestamp: number) {
+    if (!state.taskMap) {
+        state.taskMap = new Map();
+    }
+    const i: Record<string, unknown> = (input && typeof input === 'object') ? input as Record<string, unknown> : {};
+    const r: Record<string, unknown> = (result && typeof result === 'object') ? result as Record<string, unknown> : {};
+
+    if (name === 'TaskCreate') {
+        // result.task = { id, subject }
+        const task = r.task as { id?: unknown; subject?: unknown } | undefined;
+        if (!task || typeof task.id !== 'string') return;
+        const id = task.id;
+        const subject = typeof task.subject === 'string' ? task.subject : (typeof i.subject === 'string' ? i.subject : '');
+        state.taskMap.set(id, { id, content: subject, status: 'pending' });
+        syncTodosFromTaskMap(state, timestamp);
+        return;
+    }
+
+    if (name === 'TaskUpdate') {
+        const taskId = typeof i.taskId === 'string' ? i.taskId : undefined;
+        if (!taskId) return;
+        const existing = state.taskMap.get(taskId) ?? { id: taskId, content: '', status: 'pending' as const };
+        const next: TodoItem = { ...existing };
+        if (typeof i.subject === 'string') next.content = i.subject;
+        if (typeof i.status === 'string' && TASK_STATUSES.has(i.status)) {
+            next.status = i.status as TodoItem['status'];
+        }
+        state.taskMap.set(taskId, next);
+        syncTodosFromTaskMap(state, timestamp);
+        return;
+    }
+
+    if (name === 'TaskList') {
+        // result.tasks: [{ id, subject, status, ... }]
+        const tasks = r.tasks;
+        if (!Array.isArray(tasks)) return;
+        const nextMap = new Map<string, TodoItem>();
+        for (const raw of tasks) {
+            const t = raw as Record<string, unknown>;
+            const id = typeof t.id === 'string' ? t.id : undefined;
+            if (!id) continue;
+            const subject = typeof t.subject === 'string' ? t.subject : '';
+            const status = typeof t.status === 'string' && TASK_STATUSES.has(t.status)
+                ? t.status as TodoItem['status']
+                : 'pending';
+            nextMap.set(id, { id, content: subject, status });
+        }
+        state.taskMap = nextMap;
+        syncTodosFromTaskMap(state, timestamp);
+        return;
+    }
+}
+
 export function reducer(state: ReducerState, messages: NormalizedMessage[], agentState?: AgentState | null): ReducerResult {
     if (ENABLE_LOGGING) {
         console.log(`[REDUCER] Called with ${messages.length} messages, agentState: ${agentState ? 'YES' : 'NO'}`);
@@ -321,6 +388,7 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                 todos: [],
                 timestamp: msg.createdAt  // Use message timestamp, not current time
             };
+            state.taskMap = undefined;
             state.latestUsage = {
                 inputTokens: 0,
                 outputTokens: 0,
@@ -866,6 +934,19 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
 
                     if (message.tool.name === 'TodoWrite' && !c.is_error) {
                         updateLatestTodos(state, message.tool.result?.newTodos, msg.createdAt);
+                    } else if (
+                        !c.is_error &&
+                        (message.tool.name === 'TaskCreate' ||
+                            message.tool.name === 'TaskUpdate' ||
+                            message.tool.name === 'TaskList')
+                    ) {
+                        handleTaskTool(
+                            state,
+                            message.tool.name,
+                            message.tool.input,
+                            message.tool.result,
+                            msg.createdAt,
+                        );
                     }
 
                     changed.add(messageId);
