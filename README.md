@@ -1,3 +1,12 @@
+> ### 🔀 happy-plus fork
+> This is a self-hosted fork of [slopus/happy](https://github.com/slopus/happy) maintained by [@yiranxiaohui](https://github.com/yiranxiaohui).
+> Distinct from upstream: ships as **`happy-plus`** on npm (`npm i -g happy-plus`), defaults to Opus 4.8, bumps `claude-agent-sdk` to 0.3.x with Task* tools migrated, adds GHA pipelines for Android APK + GHCR server image + CLI tarball.
+> See [`.claude/CLAUDE.md`](.claude/CLAUDE.md) (gitignored, local notes) for the full fork commit list.
+>
+> Upstream README follows. Everything below is from slopus/happy unchanged.
+
+---
+
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="/.github/logotype-dark.png">
