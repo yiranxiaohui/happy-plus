@@ -1,23 +1,35 @@
-name: Build & push server image (ghcr.io)
+name: Build & push web image (ghcr.io)
 
-# Builds packages/happy-server via Dockerfile.server using workspace
-# context (repo root), then pushes to GitHub Container Registry as
-# ghcr.io/<owner>/happy-plus-server. The repo owner is lowercased to
-# satisfy GHCR's naming rules.
+# Builds packages/happy-app web export via Dockerfile.webapp using
+# workspace context (repo root), then pushes to GitHub Container
+# Registry as ghcr.io/<owner>/happy-plus-web. The repo owner is
+# lowercased to satisfy GHCR's naming rules.
+#
+# HAPPY_SERVER_URL is baked into the JS bundle at build time. The
+# workflow defaults to https://happy.yunnet.top (the maintainer's
+# self-hosted endpoint); override via workflow_dispatch input or
+# repo variable HAPPY_SERVER_URL when running on another host.
 #
 # Triggers:
 #   - manual (workflow_dispatch) — pushes :latest + :sha-<short>
-#   - tag server-plus-v* — pushes :latest + :sha-<short> + :<tag>
+#   - tag web-plus-v* — pushes :latest + :sha-<short> + :<tag>
+#   - tag v* (unified release) — same
 #
 # Pull on a host with:
-#   docker pull ghcr.io/<owner>/happy-plus-server:latest
+#   docker pull ghcr.io/<owner>/happy-plus-web:latest
 
 on:
   workflow_dispatch:
+    inputs:
+      server_url:
+        description: 'HAPPY_SERVER_URL baked into the JS bundle'
+        required: false
+        default: 'https://happy.yunnet.top'
+        type: string
   push:
     tags:
-      - 'server-plus-v*'   # server-only release
-      - 'v*'               # Unified release: triggers CLI + APK + server + web simultaneously
+      - 'web-plus-v*'
+      - 'v*'
 
 permissions:
   contents: write   # for softprops/action-gh-release
@@ -26,7 +38,7 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -36,7 +48,7 @@ jobs:
         id: image
         run: |
           OWNER="${GITHUB_REPOSITORY_OWNER,,}"
-          echo "name=ghcr.io/${OWNER}/happy-plus-server" >> "$GITHUB_OUTPUT"
+          echo "name=ghcr.io/${OWNER}/happy-plus-web" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -63,22 +75,24 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.server
+          file: Dockerfile.webapp
           push: true
+          build-args: |
+            HAPPY_SERVER_URL=${{ github.event.inputs.server_url || vars.HAPPY_SERVER_URL || 'https://happy.yunnet.top' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Attach image reference to GitHub Release (any v* / server-plus-v* tag)
-        if: startsWith(github.ref, 'refs/tags/server-plus-v') || startsWith(github.ref, 'refs/tags/v')
+      - name: Attach image reference to GitHub Release (any v* / web-plus-v* tag)
+        if: startsWith(github.ref, 'refs/tags/web-plus-v') || startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           append_body: true
           body: |
 
-            ### 🖥️ Server image (`Dockerfile.server` → GHCR)
+            ### 🌐 Web image (`Dockerfile.webapp` → GHCR)
 
             ```
             ${{ steps.image.outputs.name }}:${{ github.ref_name }}
@@ -86,6 +100,7 @@ jobs:
             ```
 
             Digest: `${{ steps.buildpush.outputs.digest }}`
+            Built with `HAPPY_SERVER_URL=${{ github.event.inputs.server_url || vars.HAPPY_SERVER_URL || 'https://happy.yunnet.top' }}`
 
             Pull:
             ```bash

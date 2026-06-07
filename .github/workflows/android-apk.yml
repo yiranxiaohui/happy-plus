@@ -20,7 +20,8 @@ on:
         type: string
   push:
     tags:
-      - 'apk-v*'
+      - 'apk-v*'   # APK-only release (uses default APP_ENV=plus)
+      - 'v*'       # Unified release: triggers CLI + APK + server + web simultaneously
 
 permissions:
   contents: write
@@ -30,7 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      APP_ENV: ${{ github.event.inputs.app_env || 'development' }}
+      # On tag push (no inputs), default to 'plus' for unified releases.
+      APP_ENV: ${{ github.event.inputs.app_env || 'plus' }}
       ARCHS: ${{ github.event.inputs.architectures || 'arm64-v8a' }}
 
     steps:
@@ -138,8 +140,10 @@ jobs:
           path: ${{ steps.collect.outputs.apk_path }}
           retention-days: 30
 
-      - name: Attach to GitHub Release (apk-v* tag only)
-        if: startsWith(github.ref, 'refs/tags/apk-v')
+      - name: Attach to GitHub Release (any v* / apk-v* tag)
+        if: startsWith(github.ref, 'refs/tags/apk-v') || startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.collect.outputs.apk_path }}
+          generate_release_notes: true
+          # Append if the unified v* release was created by a sibling workflow.

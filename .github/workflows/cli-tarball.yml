@@ -22,7 +22,8 @@ on:
         type: string
   push:
     tags:
-      - 'cli-plus-v*'
+      - 'cli-plus-v*'   # CLI-only release
+      - 'v*'            # Unified release: triggers CLI + APK + server + web simultaneously
 
 permissions:
   contents: write
@@ -60,7 +61,10 @@ jobs:
           # Manual dispatch: upstream-version + VERSION_SUFFIX.
           if [[ "$GITHUB_REF" == refs/tags/cli-plus-v* ]]; then
             NEW_VER="${GITHUB_REF_NAME#cli-plus-v}"
-            echo "Tag-driven: ${GITHUB_REF_NAME} -> happy-plus@${NEW_VER}"
+            echo "Tag-driven (cli-plus-v*): ${GITHUB_REF_NAME} -> happy-plus@${NEW_VER}"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            NEW_VER="${GITHUB_REF_NAME#v}"
+            echo "Tag-driven (unified v*): ${GITHUB_REF_NAME} -> happy-plus@${NEW_VER}"
           else
             NEW_VER="${ORIG_VER}${VERSION_SUFFIX}"
             echo "Dispatch-driven: happy@${ORIG_VER} + ${VERSION_SUFFIX} -> happy-plus@${NEW_VER}"
@@ -105,14 +109,17 @@ jobs:
           path: ${{ steps.pack.outputs.tgz_path }}
           retention-days: 30
 
-      - name: Attach to GitHub Release (cli-plus-v* tag only)
-        if: startsWith(github.ref, 'refs/tags/cli-plus-v')
+      - name: Attach to GitHub Release (any v* / cli-plus-v* tag)
+        if: startsWith(github.ref, 'refs/tags/cli-plus-v') || startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.pack.outputs.tgz_path }}
+          generate_release_notes: true
+          # If the unified v* release already exists (another workflow won the
+          # race), this appends the tarball without overwriting the body.
 
-      - name: Publish to npm (cli-plus-v* tag only)
-        if: startsWith(github.ref, 'refs/tags/cli-plus-v')
+      - name: Publish to npm (any v* / cli-plus-v* tag)
+        if: startsWith(github.ref, 'refs/tags/cli-plus-v') || startsWith(github.ref, 'refs/tags/v')
         working-directory: packages/happy-cli
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
