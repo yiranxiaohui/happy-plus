@@ -103,6 +103,17 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
         initialPermissionMode === 'yolo' ||
         sandboxEnabled ||
         Boolean(options.claudeArgs?.includes('--dangerously-skip-permissions'));
+
+    // Claude Code refuses to start with --dangerously-skip-permissions when
+    // running as root ("cannot be used with root/sudo privileges"), exiting
+    // with code 1 — which surfaced in the app as "Process exited unexpectedly"
+    // on the first message of every YOLO session (YOLO is the default mode).
+    // The happy daemon commonly runs as root (LXC/Docker containers), so seed
+    // IS_SANDBOX=1 to allow the spawned Claude process to start. User-provided
+    // IS_SANDBOX still wins (it was already merged into claudeEnvVars above).
+    if (dangerouslySkipPermissions && process.getuid?.() === 0 && !('IS_SANDBOX' in options.claudeEnvVars!)) {
+        options.claudeEnvVars = { ...options.claudeEnvVars, IS_SANDBOX: '1' };
+    }
     if (!machineId) {
         console.error(`[START] No machine ID found in settings, which is unexpected since authAndSetupMachineIfNeeded should have created it. Please report this issue on https://github.com/slopus/happy-cli/issues`);
         process.exit(1);
