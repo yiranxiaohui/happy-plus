@@ -420,6 +420,7 @@ export const zhHant: TranslationStructure = {
             acceptEdits: '接受編輯',
             plan: '計畫模式',
             dontAsk: '不再詢問',
+            auto: '自動',
             bypassPermissions: 'Yolo 模式',
             badgeAcceptAllEdits: '接受所有編輯',
             badgeBypassAllPermissions: '繞過所有權限',

@@ -52,6 +52,7 @@ export function getClaudePermissionModes(translate: Translate): PermissionMode[]
         { key: 'plan', name: translate('agentInput.permissionMode.plan'), description: null },
         { key: 'dontAsk', name: translate('agentInput.permissionMode.dontAsk'), description: null },
         { key: 'acceptEdits', name: translate('agentInput.permissionMode.acceptEdits'), description: null },
+        { key: 'auto', name: translate('agentInput.permissionMode.auto'), description: null },
         { key: 'bypassPermissions', name: translate('agentInput.permissionMode.bypassPermissions'), description: null },
     ];
 }

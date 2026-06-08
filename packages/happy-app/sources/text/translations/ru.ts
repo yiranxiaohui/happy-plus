@@ -436,6 +436,7 @@ export const ru: TranslationStructure = {
             acceptEdits: 'Принимать правки',
             plan: 'Режим планирования',
             dontAsk: 'Не спрашивать',
+            auto: 'Авто',
             bypassPermissions: 'YOLO режим',
             badgeAcceptAllEdits: 'Принимать все правки',
             badgeBypassAllPermissions: 'Обход всех разрешений',

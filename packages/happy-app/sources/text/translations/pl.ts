@@ -436,6 +436,7 @@ export const pl: TranslationStructure = {
             acceptEdits: 'Akceptuj edycje',
             plan: 'Tryb planowania',
             dontAsk: 'Nie pytaj',
+            auto: 'Auto',
             bypassPermissions: 'Tryb YOLO',
             badgeAcceptAllEdits: 'Akceptuj wszystkie edycje',
             badgeBypassAllPermissions: 'Omiń wszystkie uprawnienia',

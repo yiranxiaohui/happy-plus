@@ -420,6 +420,7 @@ export const ca: TranslationStructure = {
             acceptEdits: 'Accepta edicions',
             plan: 'Mode de planificació',
             dontAsk: 'No preguntis',
+            auto: 'Automàtic',
             bypassPermissions: 'Mode Yolo',
             badgeAcceptAllEdits: 'Accepta totes les edicions',
             badgeBypassAllPermissions: 'Omet tots els permisos',

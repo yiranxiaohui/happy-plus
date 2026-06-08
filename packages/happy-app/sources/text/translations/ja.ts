@@ -421,6 +421,7 @@ export const ja: TranslationStructure = {
             acceptEdits: '編集を許可',
             plan: 'プランモード',
             dontAsk: '確認しない',
+            auto: '自動',
             bypassPermissions: 'Yoloモード',
             badgeAcceptAllEdits: 'すべての編集を許可',
             badgeBypassAllPermissions: 'すべての権限をバイパス',

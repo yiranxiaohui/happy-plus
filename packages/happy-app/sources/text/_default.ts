@@ -434,6 +434,7 @@ export const en = {
             acceptEdits: 'accept edits',
             plan: 'plan',
             dontAsk: "don't ask",
+            auto: 'auto',
             bypassPermissions: 'yolo',
             badgeAcceptAllEdits: 'accept all edits',
             badgeBypassAllPermissions: 'yolo',

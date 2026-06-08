@@ -421,6 +421,7 @@ export const zhHans: TranslationStructure = {
             acceptEdits: '接受编辑',
             plan: '计划模式',
             dontAsk: '不再询问',
+            auto: '自动',
             bypassPermissions: 'Yolo 模式',
             badgeAcceptAllEdits: '接受所有编辑',
             badgeBypassAllPermissions: '绕过所有权限',
