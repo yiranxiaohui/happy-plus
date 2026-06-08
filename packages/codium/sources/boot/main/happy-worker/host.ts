@@ -19,7 +19,7 @@ type PendingRequest = {
     reject: (error: Error) => void
 }
 
-const DEFAULT_SERVER_URL = 'https://api.cluster-fluster.com'
+const DEFAULT_SERVER_URL = 'https://happy.yunnet.top'
 const DEFAULT_WEBAPP_URL = 'https://app.happy.engineering'
 
 let worker: Worker | null = null
