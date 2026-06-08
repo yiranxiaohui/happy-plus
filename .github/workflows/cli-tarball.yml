@@ -114,9 +114,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.pack.outputs.tgz_path }}
-          generate_release_notes: true
-          # If the unified v* release already exists (another workflow won the
-          # race), this appends the tarball without overwriting the body.
+          # release-init.yml is the leader for unified v* tags and creates the
+          # release with auto-generated notes. For cli-plus-v* single-component
+          # releases, generate notes here.
+          generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/cli-plus-v') }}
 
       - name: Publish to npm (any v* / cli-plus-v* tag)
         if: startsWith(github.ref, 'refs/tags/cli-plus-v') || startsWith(github.ref, 'refs/tags/v')

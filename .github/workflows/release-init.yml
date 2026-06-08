@@ -1,0 +1,31 @@
+name: Init release with notes
+
+# Leader workflow for unified v* tag releases. Creates the GitHub
+# Release shell with auto-generated notes BEFORE the four product
+# workflows (cli-tarball / android-apk / server-image / web-image)
+# start attaching their artifacts. Eliminates the multi-notes-append
+# race where each product workflow regenerates notes and the body
+# ends up with repeated "Full Changelog" lines.
+#
+# Triggers only on unified v* tags. Single-component releases keep
+# using their own per-component tag prefixes (cli-plus-v*, apk-v*,
+# server-plus-v*, web-plus-v*).
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Create / update GitHub Release with auto-generated notes
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
