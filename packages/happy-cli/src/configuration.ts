@@ -60,7 +60,7 @@ class Configuration {
     this.webappUrl =
       process.env.HAPPY_WEBAPP_URL ||
       readSettingsStringSync(this.settingsFile, 'webappUrl') ||
-      'https://app.happy.engineering'
+      'https://app.yunnet.top'
 
     this.isExperimentalEnabled = ['true', '1', 'yes'].includes(process.env.HAPPY_EXPERIMENTAL?.toLowerCase() || '');
     this.disableCaffeinate = ['true', '1', 'yes'].includes(process.env.HAPPY_DISABLE_CAFFEINATE?.toLowerCase() || '');

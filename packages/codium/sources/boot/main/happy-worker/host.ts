@@ -20,7 +20,7 @@ type PendingRequest = {
 }
 
 const DEFAULT_SERVER_URL = 'https://happy.yunnet.top'
-const DEFAULT_WEBAPP_URL = 'https://app.happy.engineering'
+const DEFAULT_WEBAPP_URL = 'https://app.yunnet.top'
 
 let worker: Worker | null = null
 let latestState: HappyStateSnapshot = {
