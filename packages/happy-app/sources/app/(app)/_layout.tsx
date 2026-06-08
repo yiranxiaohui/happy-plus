@@ -316,6 +316,14 @@ export default function RootLayout() {
                     headerBackTitle: t('common.back'),
                 }}
             />
+            <Stack.Screen
+                name="scanner"
+                options={{
+                    headerShown: true,
+                    headerTitle: t('navigation.connectTerminal'),
+                    headerBackTitle: t('common.back'),
+                }}
+            />
         </Stack>
     );
 }
