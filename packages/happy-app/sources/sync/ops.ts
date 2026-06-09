@@ -774,3 +774,56 @@ export type {
     SessionRipgrepResponse,
     SessionKillResponse
 };
+
+// Terminal operation types
+
+export interface TerminalInfo {
+    id: string;
+    title: string;
+    cwd: string;
+    rows: number;
+    cols: number;
+    createdAt: number;
+}
+
+/**
+ * Create a new terminal on a remote machine.
+ * Omitted optional params (cwd, shell) are not sent to avoid equality mismatches.
+ */
+export async function terminalCreate(opts: {
+    machineId: string;
+    cols: number;
+    rows: number;
+    cwd?: string;
+    shell?: string;
+}): Promise<{ terminalId: string }> {
+    const { machineId, cols, rows, cwd, shell } = opts;
+    const params: { cols: number; rows: number; cwd?: string; shell?: string } = { cols, rows };
+    if (cwd !== undefined) params.cwd = cwd;
+    if (shell !== undefined) params.shell = shell;
+    return apiSocket.machineRPC<{ terminalId: string }, typeof params>(machineId, 'terminal-create', params);
+}
+
+/**
+ * Attach to an existing terminal and receive its scrollback + current dimensions.
+ */
+export async function terminalAttach(
+    machineId: string,
+    terminalId: string,
+): Promise<{ scrollback: string; cols: number; rows: number; alive: boolean }> {
+    return apiSocket.machineRPC(machineId, 'terminal-attach', { terminalId });
+}
+
+/**
+ * List all open terminals on a remote machine.
+ */
+export async function terminalList(machineId: string): Promise<{ terminals: TerminalInfo[] }> {
+    return apiSocket.machineRPC<{ terminals: TerminalInfo[] }, {}>(machineId, 'terminal-list', {});
+}
+
+/**
+ * Close a terminal on a remote machine.
+ */
+export async function terminalClose(machineId: string, terminalId: string): Promise<{ ok: boolean }> {
+    return apiSocket.machineRPC(machineId, 'terminal-close', { terminalId });
+}
