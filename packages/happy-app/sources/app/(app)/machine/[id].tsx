@@ -449,6 +449,16 @@ export default function MachineDetailScreen() {
                     </>
                 )}
 
+                {/* Terminal */}
+                <ItemGroup title={t('terminal.title')}>
+                    <Item
+                        title={t('terminal.open')}
+                        icon={<Ionicons name="terminal-outline" size={29} color={theme.colors.text} />}
+                        disabled={!isMachineOnline(machine)}
+                        onPress={() => router.push(`/shell/${machineId}`)}
+                    />
+                </ItemGroup>
+
                 {/* Daemon */}
                 <ItemGroup title={t('machine.daemon')}>
                         <Item

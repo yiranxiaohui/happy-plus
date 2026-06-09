@@ -356,6 +356,19 @@ function SessionInfoContent({ session }: { session: Session }) {
                             onPress={() => router.push(`/machine/${session.metadata?.machineId}`)}
                         />
                     )}
+                    {session.metadata?.machineId && (
+                        <Item
+                            title={t('terminal.open')}
+                            icon={<Ionicons name="terminal-outline" size={29} color="#007AFF" />}
+                            onPress={() => {
+                                const machineId = session.metadata?.machineId;
+                                const cwd = session.metadata?.path;
+                                if (machineId) {
+                                    router.push(`/shell/${machineId}${cwd ? `?cwd=${encodeURIComponent(cwd)}` : ''}`);
+                                }
+                            }}
+                        />
+                    )}
                     {canShowResume && (
                         <Item
                             title={t('sessionInfo.resumeSession')}
