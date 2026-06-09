@@ -180,6 +180,35 @@ class ApiSocket {
         throw new Error(result.error || 'RPC call failed');
     }
 
+    /** Send a keystroke/input chunk to a machine terminal (E2E encrypted). */
+    async terminalSendInput(machineId: string, terminalId: string, input: string): Promise<void> {
+        const enc = this.encryption!.getMachineEncryption(machineId);
+        if (!enc) throw new Error(`Machine encryption not found for ${machineId}`);
+        const data = await enc.encryptRaw({ input });
+        this.socket!.emit('terminal-input' as any, { machineId, terminalId, data });
+    }
+
+    /** Notify a machine terminal of a viewport resize (no secret content). */
+    terminalSendResize(machineId: string, terminalId: string, cols: number, rows: number): void {
+        this.socket!.emit('terminal-resize' as any, { machineId, terminalId, cols, rows });
+    }
+
+    /** Subscribe to decrypted terminal output. Returns an unsubscribe fn. */
+    onTerminalOutput(handler: (e: { machineId: string; terminalId: string; output: string; seq: number }) => void): () => void {
+        return this.onMessage('terminal-output', async (raw: { machineId: string; terminalId: string; data: string; seq: number }) => {
+            const enc = this.encryption!.getMachineEncryption(raw.machineId);
+            if (!enc) return;
+            const payload = await enc.decryptRaw(raw.data) as { output: string } | null;
+            if (!payload) return;
+            handler({ machineId: raw.machineId, terminalId: raw.terminalId, output: payload.output, seq: raw.seq });
+        });
+    }
+
+    /** Subscribe to terminal exit notifications. Returns an unsubscribe fn. */
+    onTerminalExit(handler: (e: { machineId: string; terminalId: string; exitCode: number }) => void): () => void {
+        return this.onMessage('terminal-exit', (raw: { machineId: string; terminalId: string; exitCode: number }) => handler(raw));
+    }
+
     /**
      * Sends app focus state to server for push notification routing.
      * Server uses this to suppress pushes when the mobile app is in foreground.
