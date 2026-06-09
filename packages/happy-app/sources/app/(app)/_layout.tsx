@@ -136,6 +136,12 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
+                name="shell/[machineId]"
+                options={{
+                    headerTitle: t('terminal.title'),
+                }}
+            />
+            <Stack.Screen
                 name="restore/index"
                 options={{
                     headerShown: true,
