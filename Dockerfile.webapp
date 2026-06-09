@@ -35,7 +35,9 @@ ARG HAPPY_BUILD_COMMIT_SHA=""
 ARG HAPPY_BUILD_COMMIT_TIMESTAMP=""
 
 ENV NODE_ENV=production
-ENV APP_ENV=production
+# Build the happy-plus variant so the web title/branding reads "Happy Plus"
+# (app.config.js maps APP_ENV=plus -> name "Happy Plus"). Matches the APK build.
+ENV APP_ENV=plus
 ENV EXPO_PUBLIC_POSTHOG_API_KEY=$POSTHOG_API_KEY
 ENV EXPO_PUBLIC_REVENUE_CAT_STRIPE=$REVENUE_CAT_STRIPE
 ENV EXPO_PUBLIC_HAPPY_SERVER_URL=$HAPPY_SERVER_URL
