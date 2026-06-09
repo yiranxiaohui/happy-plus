@@ -602,6 +602,7 @@ export const en: TranslationStructure = {
         searching: 'Searching files...',
         noFilesFound: 'No files found',
         noFilesInProject: 'No files in project',
+        filesTruncated: ({ count }: { count: number }) => `Showing first ${count} files`,
         tryDifferentTerm: 'Try a different search term',
         searchResults: ({ count }: { count: number }) => `Search Results (${count})`,
         projectRoot: 'Project root',

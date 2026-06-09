@@ -589,6 +589,7 @@ export const zhHans: TranslationStructure = {
         searching: '正在搜索文件...',
         noFilesFound: '未找到文件',
         noFilesInProject: '项目中没有文件',
+        filesTruncated: ({ count }: { count: number }) => `仅显示前 ${count} 个文件`,
         tryDifferentTerm: '尝试不同的搜索词',
         searchResults: ({ count }: { count: number }) => `搜索结果 (${count})`,
         projectRoot: '项目根目录',

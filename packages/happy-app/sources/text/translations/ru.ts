@@ -604,6 +604,7 @@ export const ru: TranslationStructure = {
         searching: 'Поиск файлов...',
         noFilesFound: 'Файлы не найдены',
         noFilesInProject: 'Файлов в проекте нет',
+        filesTruncated: ({ count }: { count: number }) => `Показаны первые ${count} файлов`,
         tryDifferentTerm: 'Попробуйте другой поисковый запрос',
         searchResults: ({ count }: { count: number }) => `Результаты поиска (${count})`,
         projectRoot: 'Корень проекта',

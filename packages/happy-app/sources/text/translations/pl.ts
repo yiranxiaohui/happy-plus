@@ -604,6 +604,7 @@ export const pl: TranslationStructure = {
         searching: 'Wyszukiwanie plików...',
         noFilesFound: 'Nie znaleziono plików',
         noFilesInProject: 'Brak plików w projekcie',
+        filesTruncated: ({ count }: { count: number }) => `Wyświetlono pierwsze ${count} plików`,
         tryDifferentTerm: 'Spróbuj innego terminu wyszukiwania',
         searchResults: ({ count }: { count: number }) => `Wyniki wyszukiwania (${count})`,
         projectRoot: 'Katalog główny projektu',

@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { storage, useSessionGitStatus, useSessionGitStatusFiles, useSessionProjectFiles } from '@/sync/storage';
 import { getGitStatusFiles, GitFileStatus } from '@/sync/gitStatusFiles';
-import { getProjectFiles, ProjectFile } from '@/sync/projectFiles';
+import { getProjectFiles, ProjectFile, MAX_PROJECT_FILES } from '@/sync/projectFiles';
 import { FileIcon } from '@/components/FileIcon';
 import { Typography } from '@/constants/Typography';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -320,11 +320,22 @@ const AllFilesTab = React.memo(function AllFilesTab({
 
         setIsLoading(true);
         (async () => {
-            const result = await getProjectFiles(sessionId);
-            if (!cancelled) {
-                storage.getState().applyProjectFiles(pathKey, result);
-                setIsLoading(false);
+            for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+                try {
+                    const result = await getProjectFiles(sessionId);
+                    if (!cancelled) {
+                        storage.getState().applyProjectFiles(pathKey, result);
+                        setIsLoading(false);
+                    }
+                    return;
+                } catch {
+                    // RPC/timeout failure — back off and retry (never show a hard error).
+                    if (attempt < 2 && !cancelled) {
+                        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+                    }
+                }
             }
+            if (!cancelled) setIsLoading(false);
         })();
         return () => { cancelled = true; };
     }, [sessionId]);
@@ -381,6 +392,9 @@ const AllFilesTab = React.memo(function AllFilesTab({
                     </View>
                 ) : (
                     <View style={styles.tree}>
+                        {projectFiles?.truncated && (
+                            <Text style={styles.truncatedNote}>{t('files.filesTruncated', { count: MAX_PROJECT_FILES })}</Text>
+                        )}
                         {filteredTree.map((node) => (
                             <ProjectTreeNodeRow
                                 key={node.path}
@@ -735,5 +749,12 @@ const styles = StyleSheet.create((theme) => ({
         color: theme.colors.textSecondary,
         ...Typography.default(),
         marginTop: 1,
+    },
+    truncatedNote: {
+        color: theme.colors.textSecondary,
+        fontSize: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        ...Typography.default(),
     },
 }));

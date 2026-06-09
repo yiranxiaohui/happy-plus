@@ -587,6 +587,7 @@ export const pt: TranslationStructure = {
         searching: 'Buscando arquivos...',
         noFilesFound: 'Nenhum arquivo encontrado',
         noFilesInProject: 'Nenhum arquivo no projeto',
+        filesTruncated: ({ count }: { count: number }) => `Mostrando os primeiros ${count} arquivos`,
         tryDifferentTerm: 'Tente um termo de busca diferente',
         searchResults: ({ count }: { count: number }) => `Resultados da busca (${count})`,
         projectRoot: 'Raiz do projeto',

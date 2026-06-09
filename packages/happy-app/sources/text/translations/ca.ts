@@ -588,6 +588,7 @@ export const ca: TranslationStructure = {
         searching: 'Cercant fitxers...',
         noFilesFound: 'No s\'han trobat fitxers',
         noFilesInProject: 'No hi ha fitxers al projecte',
+        filesTruncated: ({ count }: { count: number }) => `Mostrant els primers ${count} fitxers`,
         tryDifferentTerm: 'Prova un terme de cerca diferent',
         searchResults: ({ count }: { count: number }) => `Resultats de la cerca (${count})`,
         projectRoot: 'Arrel del projecte',

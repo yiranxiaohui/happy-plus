@@ -589,6 +589,7 @@ export const ja: TranslationStructure = {
         searching: 'ファイルを検索中...',
         noFilesFound: 'ファイルが見つかりません',
         noFilesInProject: 'プロジェクトにファイルがありません',
+        filesTruncated: ({ count }: { count: number }) => `最初の${count}件のファイルを表示`,
         tryDifferentTerm: '別の検索語を試してください',
         searchResults: ({ count }: { count: number }) => `検索結果 (${count})`,
         projectRoot: 'プロジェクトルート',
