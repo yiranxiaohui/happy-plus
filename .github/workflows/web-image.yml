@@ -13,7 +13,14 @@ name: Build & push web image (ghcr.io)
 # Triggers:
 #   - manual (workflow_dispatch) — pushes :latest + :sha-<short>
 #   - tag web-plus-v* — pushes :latest + :sha-<short> + :<tag>
-#   - tag v* (unified release) — same
+#
+# DEPRECATED as of the web+server merge: the web client is now bundled into
+# the server image (Dockerfile.server) and served same-origin. The web client
+# also uses dynamic same-origin on web (window.location.origin), so the
+# HAPPY_SERVER_URL baked here is ignored at runtime — this standalone image is
+# only meaningful when fronted by a same-origin API. It is therefore NO LONGER
+# part of the unified `v*` release (trigger removed below). Kept for manual
+# builds (workflow_dispatch / web-plus-v*) only.
 #
 # Pull on a host with:
 #   docker pull ghcr.io/<owner>/happy-plus-web:latest
@@ -29,7 +36,6 @@ on:
   push:
     tags:
       - 'web-plus-v*'
-      - 'v*'
 
 permissions:
   contents: write   # for softprops/action-gh-release

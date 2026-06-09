@@ -1,4 +1,5 @@
 import { MMKV } from 'react-native-mmkv';
+import { Platform } from 'react-native';
 
 // Separate MMKV instance for server config that persists across logouts
 const serverConfigStorage = new MMKV({ id: 'server-config' });
@@ -8,8 +9,22 @@ const LOG_SERVER_KEY = 'log-server-url';
 const DEFAULT_SERVER_URL = 'https://happy.yunnet.top';
 
 export function getServerUrl(): string {
-    return serverConfigStorage.getString(SERVER_KEY) ||
-           (globalThis as any).__HAPPY_CONFIG__?.serverUrl ||
+    // A user-set custom server always wins (e.g. connecting to a remote instance).
+    const custom = serverConfigStorage.getString(SERVER_KEY);
+    if (custom) {
+        return custom;
+    }
+
+    // Web: dynamic same-origin — talk to whatever domain served this page. When the
+    // webapp is bundled into the server (single-service deploy), this makes the app
+    // always same-origin with its API, so CORS never applies no matter how many
+    // domains front the service. Native has no "own origin" and is not subject to
+    // browser CORS anyway, so it keeps using the absolute fallback below.
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+        return window.location.origin;
+    }
+
+    return (globalThis as any).__HAPPY_CONFIG__?.serverUrl ||
            process.env.EXPO_PUBLIC_HAPPY_SERVER_URL ||
            DEFAULT_SERVER_URL;
 }
@@ -37,7 +52,9 @@ export function setLogServerUrl(url: string | null): void {
 }
 
 export function isUsingCustomServer(): boolean {
-    return getServerUrl() !== DEFAULT_SERVER_URL;
+    // "Custom" means the user explicitly set a server URL — not the web
+    // dynamic-same-origin default, which getServerUrl() may return on web.
+    return !!serverConfigStorage.getString(SERVER_KEY);
 }
 
 export function getServerInfo(): { hostname: string; port?: number; isCustom: boolean } {

@@ -38,6 +38,20 @@ RUN pnpm --filter @slopus/happy-wire build
 # Typecheck also requires the happy-app sources which aren't in this build
 # context, so we skip the build step entirely.
 
+# Stage 2b: build the web client, to be served from the same origin as the API
+# (single-service deploy). With the web client's dynamic same-origin server URL,
+# no HAPPY_SERVER_URL needs to be baked — the app talks to whatever host serves it.
+FROM deps AS webapp
+
+ENV NODE_ENV=production
+ENV APP_ENV=production
+
+COPY packages/happy-wire ./packages/happy-wire
+COPY packages/happy-app ./packages/happy-app
+
+RUN pnpm --filter @slopus/happy-wire build
+RUN pnpm --filter happy-app exec expo export --platform web --output-dir dist
+
 # Stage 3: runtime
 FROM node:20 AS runner
 
@@ -54,6 +68,11 @@ ENV NODE_ENV=production
 COPY --from=builder /repo/node_modules /repo/node_modules
 COPY --from=builder /repo/packages/happy-wire /repo/packages/happy-wire
 COPY --from=builder /repo/packages/happy-server /repo/packages/happy-server
+
+# Bundle the web client so the server serves it same-origin with the API.
+# main.ts -> findStaticDir() picks this up via HAPPY_STATIC_DIR.
+COPY --from=webapp /repo/packages/happy-app/dist /repo/packages/happy-server/webapp
+ENV HAPPY_STATIC_DIR=/repo/packages/happy-server/webapp
 
 # Expose the port the app will run on
 EXPOSE 3000

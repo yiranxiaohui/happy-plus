@@ -12,3 +12,10 @@ node_modules
 **/ios/Pods
 **/src-tauri/target
 **/target
+# Generated native projects (not needed for server/web image builds)
+**/android
+# Local build caches (fork-specific, see .claude/CLAUDE.md)
+.pnpm-store
+.gradle-cache
+node-compile-cache
+.gradle-init-mirrors.gradle

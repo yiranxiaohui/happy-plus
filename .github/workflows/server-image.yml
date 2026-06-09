@@ -26,11 +26,24 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Bumped from 30 -> 60: the server image now also runs the webapp's
+    # `expo export` (web client bundled for same-origin serving), which is
+    # significantly heavier than the API-only build on a cold cache.
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # The merged build (full workspace install + expo web export + server)
+      # can exceed the ~14GB free disk on ubuntu-latest. Reclaim ~25GB of
+      # preinstalled toolchains we don't use before building.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune --all --force || true
+          df -h
 
       - name: Set lowercase image name
         id: image

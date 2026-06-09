@@ -10,6 +10,28 @@ import { startDatabaseMetricsUpdater } from "@/app/monitoring/metrics2";
 import { initEncrypt } from "./modules/encrypt";
 import { initGithub } from "./modules/github";
 import { loadFiles } from "./storage/files";
+import * as path from "path";
+import * as fs from "fs";
+
+// Locate a bundled webapp directory so the server can serve the web client from
+// the same origin (single-service deploy). Returns undefined when no webapp is
+// bundled, in which case startApi() falls back to the plain banner at `/`.
+// Note: this module runs under tsx as ESM, so `__dirname` is unavailable —
+// rely on HAPPY_STATIC_DIR (set by Dockerfile.server) and the package cwd.
+function findStaticDir(): string | undefined {
+    const candidates = [
+        process.env.HAPPY_STATIC_DIR,
+        path.join(process.cwd(), "webapp"),
+        path.join(process.cwd(), "packages", "happy-server", "webapp"),
+    ].filter(Boolean) as string[];
+
+    for (const candidate of candidates) {
+        if (fs.existsSync(path.join(candidate, "index.html"))) {
+            return candidate;
+        }
+    }
+    return undefined;
+}
 
 async function main() {
 
@@ -37,7 +59,19 @@ async function main() {
     // Start
     //
 
-    await startApi();
+    const staticDir = findStaticDir();
+    let injectHtmlConfig: Record<string, unknown> | undefined;
+    if (process.env.HAPPY_INJECT_HTML_CONFIG) {
+        try {
+            injectHtmlConfig = JSON.parse(process.env.HAPPY_INJECT_HTML_CONFIG);
+        } catch {
+            // ignore malformed input
+        }
+    }
+    if (staticDir) {
+        log(`Serving bundled webapp from ${staticDir}`);
+    }
+    await startApi({ staticDir, injectHtmlConfig });
     await startMetricsServer();
     startDatabaseMetricsUpdater();
     startTimeout();
