@@ -14,7 +14,7 @@ import { startCaffeinate, stopCaffeinate } from '@/utils/caffeinate';
 import packageJson from '../../package.json';
 import { getEnvironmentInfo } from '@/ui/doctor';
 import { spawnHappyCLI } from '@/utils/spawnHappyCLI';
-import { writeDaemonState, DaemonLocallyPersistedState, readDaemonState, acquireDaemonLock, releaseDaemonLock, readPersistedSessions, persistSession } from '@/persistence';
+import { writeDaemonState, DaemonLocallyPersistedState, readDaemonState, acquireDaemonLock, releaseDaemonLock, readPersistedSessions, persistSession, readSettings } from '@/persistence';
 import type { PersistedSession } from '@/persistence';
 
 import { cleanupDaemonState, isDaemonRunningCurrentlyInstalledHappyVersion, stopDaemon } from './controlClient';
@@ -835,7 +835,10 @@ export async function startDaemon(): Promise<void> {
     apiMachine.connect();
 
     // Interactive terminal (PTY) handlers — RPC lifecycle + streaming events.
-    const terminalManager = registerTerminalHandlers(apiMachine as any, machine.id, { terminalEnabled: true });
+    // Gated by the persisted `terminalEnabled` setting (defaults to on).
+    const settings = await readSettings();
+    const terminalEnabled = settings.terminalEnabled ?? true;
+    const terminalManager = registerTerminalHandlers(apiMachine as any, machine.id, { terminalEnabled });
 
     // Every 60 seconds:
     // 1. Prune stale sessions

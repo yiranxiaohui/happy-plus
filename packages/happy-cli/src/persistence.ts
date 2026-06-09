@@ -45,12 +45,16 @@ interface Settings {
   sandboxConfig?: SandboxConfig
   serverUrl?: string
   webappUrl?: string
+  // Gate for the interactive terminal (PTY) daemon handlers. Defaults to on;
+  // set to false to disable `terminal-create` on this machine.
+  terminalEnabled?: boolean
 }
 
 const defaultSettings: Settings = {
   schemaVersion: SUPPORTED_SCHEMA_VERSION,
   onboardingCompleted: false,
   sandboxConfig: undefined,
+  terminalEnabled: true,
 }
 
 /**
