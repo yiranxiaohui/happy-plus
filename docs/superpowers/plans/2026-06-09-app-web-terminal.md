@@ -41,8 +41,10 @@
 Use the multi-arch prebuilt fork to avoid node-gyp at user install time (see spec §3.5). In `packages/happy-cli/package.json` add to `"dependencies"`:
 
 ```json
-"@homebridge/node-pty-prebuilt-multiarch": "^0.12.0"
+"@homebridge/node-pty-prebuilt-multiarch": "^0.13.1"
 ```
+
+> Implementation note: bumped to `^0.13.1` (from `^0.12.0`) — 0.12.0's newest prebuilt is ABI 131 (Node 22); the host runs Node 24 (ABI 137). 0.13.1 ships abi137 + abi115/120/131, so CI on Node 20/22 still resolves a prebuilt.
 
 - [ ] **Step 2: Install**
 
