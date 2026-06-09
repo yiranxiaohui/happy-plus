@@ -7,6 +7,7 @@ import { Deferred } from "@/components/Deferred";
 import { ToolFullView } from '@/components/tools/ToolFullView';
 import { ToolHeader } from '@/components/tools/ToolHeader';
 import { ToolStatusIndicator } from '@/components/tools/ToolStatusIndicator';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { Message } from '@/sync/typesMessage';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Typography } from '@/constants/Typography';
@@ -84,6 +85,7 @@ export default React.memo(() => {
                 <Stack.Screen
                     options={{
                         headerTitle: () => <ToolHeader tool={message.tool} />,
+                        headerLeft: () => <HeaderBackButton fallback={`/session/${sessionId}`} />,
                         headerRight: () => <ToolStatusIndicator tool={message.tool} />,
                         headerStyle: {
                             backgroundColor: theme.colors.header.background,

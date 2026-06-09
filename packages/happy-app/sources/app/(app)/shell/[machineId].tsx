@@ -4,6 +4,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTerminal, TerminalSink } from '@/hooks/useTerminal';
 import { TerminalView, TerminalViewHandle } from '@/components/terminal/TerminalView';
 import { TerminalKeyBar } from '@/components/terminal/TerminalKeyBar';
+import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { t } from '@/text';
 
 export default React.memo(() => {
@@ -25,7 +26,7 @@ export default React.memo(() => {
 
     return (
         <View style={{ flex: 1, backgroundColor: '#000' }}>
-            <Stack.Screen options={{ headerShown: true, headerTitle: t('terminal.title') }} />
+            <Stack.Screen options={{ headerShown: true, headerTitle: t('terminal.title'), headerLeft: () => <HeaderBackButton fallback={`/machine/${machineId}`} /> }} />
             <TerminalView
                 onReady={(h) => { handleRef.current = h; h.focus(); }}
                 onInput={(d) => term.write(d)}
