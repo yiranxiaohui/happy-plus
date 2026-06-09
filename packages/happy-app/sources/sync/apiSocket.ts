@@ -63,6 +63,10 @@ class ApiSocket {
     private reconnectedListeners: Set<() => void> = new Set();
     private statusListeners: Set<(status: 'disconnected' | 'connecting' | 'connected' | 'error') => void> = new Set();
     private currentStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
+    private terminalOutputSubs = new Set<(e: { machineId: string; terminalId: string; output: string; seq: number }) => void>();
+    private terminalExitSubs = new Set<(e: { machineId: string; terminalId: string; exitCode: number }) => void>();
+    private terminalOutputDemuxUnsub: (() => void) | null = null;
+    private terminalExitDemuxUnsub: (() => void) | null = null;
 
     //
     // Initialization
@@ -193,20 +197,43 @@ class ApiSocket {
         this.socket!.emit('terminal-resize' as any, { machineId, terminalId, cols, rows });
     }
 
-    /** Subscribe to decrypted terminal output. Returns an unsubscribe fn. */
+    /** Subscribe to decrypted terminal output. Returns an unsubscribe fn. Multiple subscribers supported. */
     onTerminalOutput(handler: (e: { machineId: string; terminalId: string; output: string; seq: number }) => void): () => void {
-        return this.onMessage('terminal-output', async (raw: { machineId: string; terminalId: string; data: string; seq: number }) => {
-            const enc = this.encryption!.getMachineEncryption(raw.machineId);
-            if (!enc) return;
-            const payload = await enc.decryptRaw(raw.data) as { output: string } | null;
-            if (!payload) return;
-            handler({ machineId: raw.machineId, terminalId: raw.terminalId, output: payload.output, seq: raw.seq });
-        });
+        this.terminalOutputSubs.add(handler);
+        if (!this.terminalOutputDemuxUnsub) {
+            this.terminalOutputDemuxUnsub = this.onMessage('terminal-output', async (raw: { machineId: string; terminalId: string; data: string; seq: number }) => {
+                const enc = this.encryption!.getMachineEncryption(raw.machineId);
+                if (!enc) return;
+                const payload = await enc.decryptRaw(raw.data) as { output: string } | null;
+                if (!payload) return;
+                const evt = { machineId: raw.machineId, terminalId: raw.terminalId, output: payload.output, seq: raw.seq };
+                for (const h of this.terminalOutputSubs) h(evt);
+            });
+        }
+        return () => {
+            this.terminalOutputSubs.delete(handler);
+            if (this.terminalOutputSubs.size === 0 && this.terminalOutputDemuxUnsub) {
+                this.terminalOutputDemuxUnsub();
+                this.terminalOutputDemuxUnsub = null;
+            }
+        };
     }
 
-    /** Subscribe to terminal exit notifications. Returns an unsubscribe fn. */
+    /** Subscribe to terminal exit notifications. Returns an unsubscribe fn. Multiple subscribers supported. */
     onTerminalExit(handler: (e: { machineId: string; terminalId: string; exitCode: number }) => void): () => void {
-        return this.onMessage('terminal-exit', (raw: { machineId: string; terminalId: string; exitCode: number }) => handler(raw));
+        this.terminalExitSubs.add(handler);
+        if (!this.terminalExitDemuxUnsub) {
+            this.terminalExitDemuxUnsub = this.onMessage('terminal-exit', (raw: { machineId: string; terminalId: string; exitCode: number }) => {
+                for (const h of this.terminalExitSubs) h(raw);
+            });
+        }
+        return () => {
+            this.terminalExitSubs.delete(handler);
+            if (this.terminalExitSubs.size === 0 && this.terminalExitDemuxUnsub) {
+                this.terminalExitDemuxUnsub();
+                this.terminalExitDemuxUnsub = null;
+            }
+        };
     }
 
     /**

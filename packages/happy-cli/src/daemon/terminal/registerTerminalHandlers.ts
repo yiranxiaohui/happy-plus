@@ -22,13 +22,16 @@ export function registerTerminalHandlers(api: ApiMachineLike, machineId: string,
     const mgr = new TerminalManager();
     const { key, variant } = api.getEncryption();
     const coalescers = new Map<string, OutputCoalescer>();
+    const emitSeqByTerminal = new Map<string, number>();
 
     const coalescerFor = (terminalId: string) => {
         let c = coalescers.get(terminalId);
         if (!c) {
             c = new OutputCoalescer((data) => {
+                const seq = (emitSeqByTerminal.get(terminalId) ?? 0) + 1;
+                emitSeqByTerminal.set(terminalId, seq);
                 const enc = encodeBase64(encrypt(key, variant, { output: data }));
-                api.emitEvent('terminal-output', { machineId, terminalId, data: enc, seq: 0 });
+                api.emitEvent('terminal-output', { machineId, terminalId, data: enc, seq });
             }, { flushMs: OUTPUT_FLUSH_MS, maxChunk: OUTPUT_MAX_CHUNK });
             coalescers.set(terminalId, c);
         }
@@ -40,6 +43,7 @@ export function registerTerminalHandlers(api: ApiMachineLike, machineId: string,
         coalescers.get(terminalId)?.flushNow();
         coalescers.get(terminalId)?.dispose();
         coalescers.delete(terminalId);
+        emitSeqByTerminal.delete(terminalId);
         api.emitEvent('terminal-exit', { machineId, terminalId, exitCode });
     });
 

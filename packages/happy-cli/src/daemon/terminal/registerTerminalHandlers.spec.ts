@@ -38,4 +38,21 @@ describe('registerTerminalHandlers', () => {
             expect(api.emitted.some(e => e.event === 'terminal-exit')).toBe(true);
         }, { timeout: 5000 });
     });
+
+    it('emits terminal-output with a monotonic per-emit seq starting at 1', async () => {
+        const api = makeFakeApiMachine();
+        registerTerminalHandlers(api as any, 'm1', { terminalEnabled: true });
+        const created = await api.rpc.get('terminal-create')!({ cols: 80, rows: 24, shell: process.env.SHELL || '/bin/bash' });
+        const input = encodeBase64(encrypt(api.key, 'dataKey', { input: 'echo A; echo B; echo C; exit\r' }));
+        api.events.get('terminal-input')!({ machineId: 'm1', terminalId: created.terminalId, data: input });
+        await vi.waitFor(() => {
+            expect(api.emitted.some(e => e.event === 'terminal-exit')).toBe(true);
+        }, { timeout: 5000 });
+        const seqs = api.emitted.filter(e => e.event === 'terminal-output').map(e => e.data.seq);
+        expect(seqs.length).toBeGreaterThan(0);
+        expect(seqs[0]).toBe(1);
+        for (let i = 1; i < seqs.length; i++) {
+            expect(seqs[i]).toBe(seqs[i - 1] + 1);  // strictly +1 per emit
+        }
+    });
 });
