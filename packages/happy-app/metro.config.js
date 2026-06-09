@@ -10,6 +10,10 @@ const config = getDefaultConfig(__dirname, {
 // Source: https://shopify.github.io/react-native-skia/docs/getting-started/installation/
 config.resolver.assetExts.push('wasm');
 
+// Treat .html as a bundled asset so the self-contained terminal page
+// (assets/terminal/index.html) can be require()'d and loaded via expo-asset.
+config.resolver.assetExts.push('html');
+
 // Exclude Tauri Rust build artifacts from Metro's file watcher.
 // Cargo writes/deletes transient files in src-tauri/target/debug/deps during
 // `tauri dev`, which crashes Metro's fallback watcher on Windows with ENOENT.
