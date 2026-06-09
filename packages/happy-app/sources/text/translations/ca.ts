@@ -471,6 +471,7 @@ export const ca: TranslationStructure = {
         },
         context: {
             remaining: ({ percent }: { percent: number }) => `${percent}% restant`,
+            tokens: ({ used, total }: { used: string; total: string }) => `${used} / ${total}`,
         },
         suggestion: {
             fileLabel: 'FITXER',

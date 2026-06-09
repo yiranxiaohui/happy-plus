@@ -472,6 +472,7 @@ export const ja: TranslationStructure = {
         },
         context: {
             remaining: ({ percent }: { percent: number }) => `残り ${percent}%`,
+            tokens: ({ used, total }: { used: string; total: string }) => `${used} / ${total}`,
         },
         suggestion: {
             fileLabel: 'ファイル',

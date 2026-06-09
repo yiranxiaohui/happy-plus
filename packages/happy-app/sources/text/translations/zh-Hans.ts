@@ -472,6 +472,7 @@ export const zhHans: TranslationStructure = {
         },
         context: {
             remaining: ({ percent }: { percent: number }) => `剩余 ${percent}%`,
+            tokens: ({ used, total }: { used: string; total: string }) => `${used} / ${total}`,
         },
         suggestion: {
             fileLabel: '文件',

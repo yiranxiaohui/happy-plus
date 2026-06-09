@@ -487,6 +487,7 @@ export const ru: TranslationStructure = {
         },
         context: {
             remaining: ({ percent }: { percent: number }) => `Осталось ${percent}%`,
+            tokens: ({ used, total }: { used: string; total: string }) => `${used} / ${total}`,
         },
         suggestion: {
             fileLabel: 'ФАЙЛ',

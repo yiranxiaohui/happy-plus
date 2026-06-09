@@ -95,6 +95,9 @@ interface AgentInputProps {
 
 const MAX_CONTEXT_SIZE = 190000;
 
+// Format a token count as a compact "k" string, e.g. 120000 -> "120k".
+const formatTokensK = (n: number): string => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);
+
 const stylesheet = StyleSheet.create((theme, runtime) => ({
     container: {
         alignItems: 'center',
@@ -303,14 +306,14 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
 const getContextWarning = (contextSize: number, alwaysShow: boolean = false, theme: Theme) => {
     const percentageUsed = (contextSize / MAX_CONTEXT_SIZE) * 100;
     const percentageRemaining = Math.max(0, Math.min(100, 100 - percentageUsed));
+    const text = t('agentInput.context.tokens', { used: formatTokensK(contextSize), total: formatTokensK(MAX_CONTEXT_SIZE) });
 
     if (percentageRemaining <= 5) {
-        return { text: t('agentInput.context.remaining', { percent: Math.round(percentageRemaining) }), color: theme.colors.warningCritical };
+        return { text, color: theme.colors.warningCritical };
     } else if (percentageRemaining <= 10) {
-        return { text: t('agentInput.context.remaining', { percent: Math.round(percentageRemaining) }), color: theme.colors.warning };
+        return { text, color: theme.colors.warning };
     } else if (alwaysShow) {
-        // Show context remaining in neutral color when not near limit
-        return { text: t('agentInput.context.remaining', { percent: Math.round(percentageRemaining) }), color: theme.colors.warning };
+        return { text, color: theme.colors.warning };
     }
     return null; // No display needed
 };
