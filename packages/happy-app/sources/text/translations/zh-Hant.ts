@@ -718,6 +718,12 @@ export const zhHant: TranslationStructure = {
     },
 
     terminal: {
+        // Used by interactive terminal feature
+        title: '終端機',
+        open: '開啟終端機',
+        ended: '終端機已結束',
+        reconnected: '已重新連線',
+        disabled: '此機器已停用終端機',
         // Used by terminal connection screens
         webBrowserRequired: '需要 Web 瀏覽器',
         webBrowserRequiredDescription: '出於安全原因，終端連線連結只能在 Web 瀏覽器中開啟。請使用 QR Code 掃描器或在電腦上開啟此連結。',

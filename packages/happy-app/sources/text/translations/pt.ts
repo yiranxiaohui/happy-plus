@@ -717,6 +717,12 @@ export const pt: TranslationStructure = {
     },
 
     terminal: {
+        // Used by interactive terminal feature
+        title: 'Terminal',
+        open: 'Abrir terminal',
+        ended: 'Terminal encerrado',
+        reconnected: 'Reconectado',
+        disabled: 'O terminal está desativado nesta máquina',
         // Used by terminal connection screens
         webBrowserRequired: 'Navegador web necessário',
         webBrowserRequiredDescription: 'Links de conexão de terminal só podem ser abertos em um navegador web por questões de segurança. Use o leitor de código QR ou abra este link num computador.',

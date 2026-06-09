@@ -718,6 +718,12 @@ export const ca: TranslationStructure = {
     },
 
     terminal: {
+        // Used by interactive terminal feature
+        title: 'Terminal',
+        open: 'Obre el terminal',
+        ended: 'Terminal finalitzat',
+        reconnected: 'Reconnectat',
+        disabled: 'El terminal està desactivat en aquesta màquina',
         // Used by terminal connection screens
         webBrowserRequired: 'Es requereix un navegador web',
         webBrowserRequiredDescription: 'Els enllaços de connexió de terminal només es poden obrir en un navegador web per raons de seguretat. Utilitza l\'escàner de codi QR o obre aquest enllaç en un ordinador.',

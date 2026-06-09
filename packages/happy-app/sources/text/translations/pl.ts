@@ -734,6 +734,12 @@ export const pl: TranslationStructure = {
     },
 
     terminal: {
+        // Used by interactive terminal feature
+        title: 'Terminal',
+        open: 'Otwórz terminal',
+        ended: 'Terminal zakończony',
+        reconnected: 'Połączono ponownie',
+        disabled: 'Terminal jest wyłączony na tym urządzeniu',
         // Used by terminal connection screens
         webBrowserRequired: 'Wymagana przeglądarka internetowa',
         webBrowserRequiredDescription: 'Linki połączenia terminala można otwierać tylko w przeglądarce internetowej ze względów bezpieczeństwa. Użyj skanera kodów QR lub otwórz ten link na komputerze.',

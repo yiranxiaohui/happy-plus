@@ -722,6 +722,12 @@ export const ru: TranslationStructure = {
     },
 
     terminal: {
+        // Used by interactive terminal feature
+        title: 'Терминал',
+        open: 'Открыть терминал',
+        ended: 'Терминал завершён',
+        reconnected: 'Переподключено',
+        disabled: 'Терминал отключён на этой машине',
         // Used by terminal connection screens
         webBrowserRequired: 'Требуется веб-браузер',
         webBrowserRequiredDescription: 'Ссылки подключения терминала можно открывать только в веб-браузере по соображениям безопасности. Используйте сканер QR-кодов или откройте эту ссылку на компьютере.',

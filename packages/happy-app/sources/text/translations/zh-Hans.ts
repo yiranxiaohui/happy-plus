@@ -719,6 +719,12 @@ export const zhHans: TranslationStructure = {
     },
 
     terminal: {
+        // Used by interactive terminal feature
+        title: '终端',
+        open: '打开终端',
+        ended: '终端已结束',
+        reconnected: '已重连',
+        disabled: '此机器已禁用终端',
         // Used by terminal connection screens
         webBrowserRequired: '需要 Web 浏览器',
         webBrowserRequiredDescription: '出于安全原因，终端连接链接只能在 Web 浏览器中打开。请使用二维码扫描器或在计算机上打开此链接。',

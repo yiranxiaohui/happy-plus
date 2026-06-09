@@ -732,6 +732,12 @@ export const en: TranslationStructure = {
     },
 
     terminal: {
+        // Used by interactive terminal feature
+        title: 'Terminal',
+        open: 'Open Terminal',
+        ended: 'Terminal ended',
+        reconnected: 'Reconnected',
+        disabled: 'Terminal is disabled on this machine',
         // Used by terminal connection screens
         webBrowserRequired: 'Web Browser Required',
         webBrowserRequiredDescription: 'Terminal connection links can only be opened in a web browser for security reasons. Please use the QR code scanner or open this link on a computer.',

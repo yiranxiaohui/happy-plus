@@ -719,6 +719,12 @@ export const ja: TranslationStructure = {
     },
 
     terminal: {
+        // Used by interactive terminal feature
+        title: 'ターミナル',
+        open: 'ターミナルを開く',
+        ended: 'ターミナルが終了しました',
+        reconnected: '再接続しました',
+        disabled: 'このマシンではターミナルが無効です',
         // Used by terminal connection screens
         webBrowserRequired: 'Webブラウザが必要です',
         webBrowserRequiredDescription: 'ターミナル接続リンクはセキュリティ上の理由からWebブラウザでのみ開くことができます。QRコードスキャナーを使用するか、コンピューターでこのリンクを開いてください。',
