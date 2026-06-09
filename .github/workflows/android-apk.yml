@@ -88,10 +88,25 @@ jobs:
             echo "BUILD_TYPE=release" >> "$GITHUB_ENV"
           fi
 
+      - name: Derive app version from tag
+        run: |
+          # v1.1.22 / apk-v1.1.22 -> 1.1.22. app.config.js reads APP_VERSION for
+          # versionName + derives versionCode from it. Non-tag refs (manual runs
+          # on a branch) fall back to the hardcoded version in app.config.js.
+          REF="${GITHUB_REF_NAME}"
+          VER="${REF#apk-}"; VER="${VER#v}"
+          if echo "$VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "APP_VERSION=$VER" >> "$GITHUB_ENV"
+            echo "Building APK as version $VER"
+          else
+            echo "Ref '$REF' is not a release tag; using app.config.js fallback version"
+          fi
+
       - name: Expo prebuild (generate android/)
         working-directory: packages/happy-app
         env:
           APP_ENV: ${{ env.APP_ENV }}
+          APP_VERSION: ${{ env.APP_VERSION }}
         run: pnpm exec expo prebuild --platform android --no-install --clean
 
       - name: Cache Gradle

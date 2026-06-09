@@ -59,11 +59,23 @@ function loadBuildMetadata() {
 
 const buildMetadata = loadBuildMetadata();
 
+// App version (Android versionName / iOS short version). Driven by APP_VERSION
+// in CI (derived from the release tag, e.g. v1.1.22 -> 1.1.22); falls back to a
+// fixed value for local builds. Without this every APK reported a stale 1.7.0.
+const appVersion = process.env.APP_VERSION || "1.7.0";
+// Monotonic Android versionCode derived from the semver (X.Y.Z -> X*10000 +
+// Y*100 + Z). Required so a new APK installs over an older one (Android refuses
+// an install whose versionCode is not greater than the installed app's).
+const androidVersionCode = (() => {
+    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(appVersion);
+    return m ? (parseInt(m[1], 10) * 10000 + parseInt(m[2], 10) * 100 + parseInt(m[3], 10)) : 1;
+})();
+
 export default {
     expo: {
         name,
         slug: "happy",
-        version: "1.7.0",
+        version: appVersion,
         runtimeVersion: "21",
         orientation: "default",
         icon: "./sources/assets/images/icon.png",
@@ -114,6 +126,7 @@ export default {
                 "android.permission.READ_MEDIA_VIDEO",
             ],
             package: bundleId,
+            versionCode: androidVersionCode,
             googleServicesFile: "./google-services.json",
             intentFilters: variant === 'production' ? [
                 {
