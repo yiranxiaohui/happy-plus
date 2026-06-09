@@ -76,3 +76,11 @@ happy-workspaces/
 
 # third party tools
 .supervibe/
+
+# local build caches (fork-specific) — keep out of git AND out of the session
+# file browser (lists `git ls-files --others`); otherwise ~100k untracked files
+# from these caches make the file panel time out.
+.pnpm-store/
+.gradle-cache/
+node-compile-cache/
+.gradle-init-mirrors.gradle
