@@ -97,6 +97,8 @@ export class ApiMachineClient {
     private rpcHandlerManager: RpcHandlerManager;
     private resumeSessionHandler: ((sessionId: string, options?: { model?: string; permissionMode?: string }) => Promise<SpawnSessionResult>) | null = null;
     private reconnectInterval: NodeJS.Timeout | null = null;
+    // Arbitrary (non-RPC) socket event listeners that must be (re)bound on every connect.
+    private customEventListeners = new Map<string, (data: any) => void>();
 
     constructor(
         private token: string,
@@ -257,6 +259,27 @@ export class ApiMachineClient {
 
             return { message: 'Daemon stop request acknowledged, starting shutdown sequence...' };
         });
+    }
+
+    /** Register an extra RPC method on this machine's scope (auto encrypt/decrypt). */
+    registerRpcHandler<TReq = any, TResp = any>(method: string, handler: (params: TReq) => Promise<TResp> | TResp): void {
+        this.rpcHandlerManager.registerHandler<TReq, TResp>(method, handler as any);
+    }
+
+    /** Emit an arbitrary event to the server over the machine socket (fire-and-forget). */
+    emitEvent(event: string, data: any): void {
+        this.socket?.emit(event as any, data);
+    }
+
+    /** Subscribe to an arbitrary server→daemon event. Rebound automatically on reconnect. */
+    onEvent(event: string, handler: (data: any) => void): void {
+        this.customEventListeners.set(event, handler);
+        this.socket?.on(event as any, handler as any);
+    }
+
+    /** The machine's E2E key material, for encrypting/decrypting streaming payloads. */
+    getEncryption(): { key: Uint8Array; variant: 'legacy' | 'dataKey' } {
+        return { key: this.machine.encryptionKey, variant: this.machine.encryptionVariant };
     }
 
     private syncResumeSessionRpcRegistration(): void {
@@ -424,6 +447,11 @@ export class ApiMachineClient {
                 logger.debug(`[API MACHINE] Received unknown update type: ${(data.body as any).t}`);
             }
         });
+
+        // Re-attach any custom (terminal) event listeners after (re)connect.
+        for (const [event, handler] of this.customEventListeners) {
+            this.socket.on(event as any, handler as any);
+        }
 
         this.socket.on('connect_error', (error) => {
             logger.debug(`[API MACHINE] Connection error: ${error.message}`);
