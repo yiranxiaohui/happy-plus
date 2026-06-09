@@ -60,6 +60,11 @@ jobs:
         SERVER_PACKAGE_FILE=$(ls packages/happy-server/*.tgz)
         npm install -g "./$SERVER_PACKAGE_FILE" "./$HAPPY_PACKAGE_FILE"
 
+    - name: node-pty loads (terminal feature)
+      run: |
+        cd packages/happy-cli
+        node -e "const pty=require('@homebridge/node-pty-prebuilt-multiarch'); const p=pty.spawn('bash',['-c','echo ok'],{cols:80,rows:24}); let out=''; p.onData(d=>out+=d); p.onExit(()=>{ if(!out.includes('ok')){process.exit(1)} });"
+
     - name: Test binary execution
       run: |
         # Test that the binary starts successfully
