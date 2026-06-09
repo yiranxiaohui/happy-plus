@@ -48,7 +48,7 @@ Step 2: Install CLI on your computer
 npm install -g happy-plus
 ```
 
-> 本 fork 以 `happy-plus` 发布到 npm；安装后可执行文件仍叫 `happy`。
+> 本 fork 以 `happy-plus` 发布到 npm，可执行命令也是 `happy-plus`（不与上游 `happy` 冲突）。
 
 <h3 align="center">
 Step 3: Start using `happy` instead of `claude` or `codex`
@@ -56,14 +56,14 @@ Step 3: Start using `happy` instead of `claude` or `codex`
 
 ```bash
 # Instead of claude, use:
-happy claude
+happy-plus claude
 # or
-happy codex
+happy-plus codex
 ```
 
 ## How does it work?
 
-On your computer, run `happy` instead of `claude` or `happy codex` instead of `codex` to start your AI through our wrapper. When you want to control your coding agent from your phone, it restarts the session in remote mode. To switch back to your computer, just press any key on your keyboard.
+On your computer, run `happy-plus` instead of `claude` or `happy-plus codex` instead of `codex` to start your AI through our wrapper. When you want to control your coding agent from your phone, it restarts the session in remote mode. To switch back to your computer, just press any key on your keyboard.
 
 ## 🔥 Why Happy Coder?
 
