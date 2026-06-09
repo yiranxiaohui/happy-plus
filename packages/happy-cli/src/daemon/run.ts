@@ -28,6 +28,7 @@ import { detectCLIAvailability } from '@/utils/detectCLI';
 import { buildResumeLaunch } from '@/resume/handleResumeCommand';
 import { detectResumeSupport } from '@/resume/localHappyAgentAuth';
 import { encodeBase64, decodeBase64, decrypt } from '@/api/encryption';
+import { registerTerminalHandlers } from './terminal/registerTerminalHandlers';
 
 /** Shell-escape a string for safe interpolation into tmux commands. */
 function shellescape(s: string): string {
@@ -833,6 +834,9 @@ export async function startDaemon(): Promise<void> {
     // Connect to server
     apiMachine.connect();
 
+    // Interactive terminal (PTY) handlers — RPC lifecycle + streaming events.
+    const terminalManager = registerTerminalHandlers(apiMachine as any, machine.id, { terminalEnabled: true });
+
     // Every 60 seconds:
     // 1. Prune stale sessions
     // 2. Check if daemon needs update
@@ -954,6 +958,7 @@ export async function startDaemon(): Promise<void> {
       // Give time for metadata update to send
       await new Promise(resolve => setTimeout(resolve, 100));
 
+      terminalManager.shutdown();
       apiMachine.shutdown();
       await stopControlServer();
       await cleanupDaemonState();
