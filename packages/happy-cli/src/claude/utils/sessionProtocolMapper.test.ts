@@ -339,6 +339,61 @@ describe('mapClaudeLogMessageToSessionEnvelopes', () => {
         expect(result.currentTurnId).toBe('turn-1');
         expect(result.envelopes).toHaveLength(0);
     });
+
+    it('collects assistant image blocks into pendingImages', () => {
+        const result = mapClaudeLogMessageToSessionEnvelopes({
+            type: 'assistant',
+            uuid: 'a-img',
+            message: {
+                role: 'assistant',
+                content: [
+                    { type: 'text', text: 'here is a chart' },
+                    { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'aGVsbG8=' } },
+                ],
+            },
+            timestamp: '2025-01-01T00:00:02.000Z',
+        } as any, { currentTurnId: null });
+
+        expect(result.pendingImages).toEqual([
+            { base64: 'aGVsbG8=', mediaType: 'image/png' },
+        ]);
+        expect(result.envelopes.some(e => e.ev.t === 'text')).toBe(true);
+    });
+
+    it('collects tool_result image blocks into pendingImages', () => {
+        const state = { currentTurnId: 't-1' };
+        const result = mapClaudeLogMessageToSessionEnvelopes({
+            type: 'user',
+            uuid: 'u-img',
+            message: {
+                role: 'user',
+                content: [{
+                    type: 'tool_result',
+                    tool_use_id: 'call-9',
+                    content: [
+                        { type: 'text', text: 'read 1 image' },
+                        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'd29ybGQ=' } },
+                    ],
+                }],
+            },
+            timestamp: '2025-01-01T00:00:03.000Z',
+        } as any, state as any);
+
+        expect(result.pendingImages).toEqual([
+            { base64: 'd29ybGQ=', mediaType: 'image/jpeg' },
+        ]);
+        expect(result.envelopes.some(e => e.ev.t === 'tool-call-end')).toBe(true);
+    });
+
+    it('returns empty pendingImages when no images present', () => {
+        const result = mapClaudeLogMessageToSessionEnvelopes({
+            type: 'user',
+            uuid: 'u-2',
+            message: { role: 'user', content: 'plain' },
+            timestamp: '2025-01-01T00:00:04.000Z',
+        } as any, { currentTurnId: null });
+        expect(result.pendingImages).toEqual([]);
+    });
 });
 
 describe('closeClaudeTurnWithStatus', () => {

@@ -18,10 +18,27 @@ export type ClaudeSessionProtocolState = {
     activeSubagents?: Set<string>;
 };
 
+export type PendingImage = {
+    base64: string;
+    mediaType: string;
+};
+
 type ClaudeMapperResult = {
     currentTurnId: string | null;
     envelopes: SessionEnvelope[];
+    pendingImages: PendingImage[];
 };
+
+function collectImageBlock(block: any, pendingImages: PendingImage[]): boolean {
+    if (block?.type === 'image' &&
+        block.source?.type === 'base64' &&
+        typeof block.source.data === 'string' &&
+        typeof block.source.media_type === 'string') {
+        pendingImages.push({ base64: block.source.data, mediaType: block.source.media_type });
+        return true;
+    }
+    return false;
+}
 
 function isSubagentTool(name: string): boolean {
     return name === 'Task' || name === 'Agent';
@@ -429,6 +446,7 @@ export function closeClaudeTurnWithStatus(
     return {
         currentTurnId: state.currentTurnId,
         envelopes,
+        pendingImages: [],
     };
 }
 
@@ -444,6 +462,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
     state: ClaudeSessionProtocolState,
 ): ClaudeMapperResult {
     const envelopes: SessionEnvelope[] = [];
+    const pendingImages: PendingImage[] = [];
     const claudeUuid = pickUuid(message);
     const providerSubagent = resolveProviderSubagent(message, state);
     const subagent = providerSubagent
@@ -456,6 +475,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
         return {
             currentTurnId: state.currentTurnId,
             envelopes: [],
+            pendingImages,
         };
     }
 
@@ -463,6 +483,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
         return {
             currentTurnId: state.currentTurnId,
             envelopes,
+            pendingImages,
         };
     }
 
@@ -470,6 +491,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
         return {
             currentTurnId: state.currentTurnId,
             envelopes,
+            pendingImages,
         };
     }
 
@@ -486,6 +508,10 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
 
             if (block.type === 'thinking' && typeof block.thinking === 'string') {
                 envelopes.push(createEnvelope('agent', { t: 'text', text: block.thinking, thinking: true }, { turn: turnId, subagent, claudeUuid }));
+                continue;
+            }
+
+            if (collectImageBlock(block, pendingImages)) {
                 continue;
             }
 
@@ -509,6 +535,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
                     for (const bufferedMessage of buffered) {
                         const replay = mapClaudeLogMessageToSessionEnvelopesInternal(bufferedMessage, state);
                         envelopes.push(...replay.envelopes);
+                        pendingImages.push(...replay.pendingImages);
                     }
                     continue;
                 }
@@ -528,6 +555,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
                 for (const bufferedMessage of buffered) {
                     const replay = mapClaudeLogMessageToSessionEnvelopesInternal(bufferedMessage, state);
                     envelopes.push(...replay.envelopes);
+                    pendingImages.push(...replay.pendingImages);
                 }
             }
         }
@@ -535,6 +563,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
         return {
             currentTurnId: state.currentTurnId,
             envelopes,
+            pendingImages,
         };
     }
 
@@ -549,6 +578,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
             return {
                 currentTurnId: state.currentTurnId,
                 envelopes,
+                pendingImages,
             };
         }
         if (typeof message.message.content === 'string') {
@@ -564,6 +594,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
             return {
                 currentTurnId: state.currentTurnId,
                 envelopes,
+                pendingImages,
             };
         }
 
@@ -572,6 +603,7 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
             return {
                 currentTurnId: state.currentTurnId,
                 envelopes,
+                pendingImages,
             };
         }
 
@@ -581,6 +613,11 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
         }
         for (const block of blocks) {
             if (block.type === 'tool_result' && typeof block.tool_use_id === 'string' && block.tool_use_id.length > 0) {
+                if (Array.isArray(block.content)) {
+                    for (const inner of block.content) {
+                        collectImageBlock(inner, pendingImages);
+                    }
+                }
                 const sessionSubagentForToolResult = getSessionSubagentIdForProviderSubagent(state, block.tool_use_id);
                 if (!message.isSidechain) {
                     if (getHiddenParentToolCalls(state).has(block.tool_use_id)) {
@@ -609,11 +646,13 @@ function mapClaudeLogMessageToSessionEnvelopesInternal(
         return {
             currentTurnId: state.currentTurnId,
             envelopes,
+            pendingImages,
         };
     }
 
     return {
         currentTurnId: state.currentTurnId,
         envelopes,
+        pendingImages,
     };
 }
