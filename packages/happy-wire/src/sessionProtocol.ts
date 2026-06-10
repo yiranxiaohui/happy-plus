@@ -53,7 +53,7 @@ export const sessionFileEventSchema = z.object({
     .object({
       width: z.number(),
       height: z.number(),
-      thumbhash: z.string(),
+      thumbhash: z.string().optional(),
     })
     .optional(),
 });
