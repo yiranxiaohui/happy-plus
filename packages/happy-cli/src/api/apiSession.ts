@@ -2,7 +2,7 @@ import { logger } from '@/ui/logger'
 import { EventEmitter } from 'node:events'
 import { io, Socket } from 'socket.io-client'
 import { AgentState, ClientToServerEvents, FileEventMessage, FileEventMessageSchema, Metadata, ServerToClientEvents, Session, Update, UserMessage, UserMessageSchema, Usage } from './types'
-import { decodeBase64, decryptBlob, decrypt, encodeBase64, encrypt } from './encryption';
+import { decodeBase64, decryptBlob, decrypt, encodeBase64, encrypt, encryptBlob } from './encryption';
 import { backoff, delay } from '@/utils/time';
 import { configuration } from '@/configuration';
 import { RawJSONLines } from '@/claude/types';
@@ -72,6 +72,55 @@ type V3PostSessionMessagesResponse = {
         updatedAt: number;
     }>;
 };
+
+/**
+ * Encrypt and upload a session attachment blob.
+ * Mirrors the app's request-upload → PUT/POST flow (apiAttachments.ts) and
+ * the download direction in ApiSessionClient.downloadAttachment. Returns the
+ * storage ref for a `file` envelope. Exported standalone for testability.
+ */
+export async function uploadSessionAttachment(opts: {
+    serverUrl: string;
+    sessionId: string;
+    token: string;
+    blobKey: Uint8Array;
+    data: Uint8Array;
+    filename: string;
+}): Promise<{ ref: string; size: number }> {
+    const encrypted = encryptBlob(opts.data, opts.blobKey);
+
+    const requestRes = await axios.post(
+        `${opts.serverUrl}/v1/sessions/${opts.sessionId}/attachments/request-upload`,
+        { filename: opts.filename, size: encrypted.length },
+        { headers: { 'Authorization': `Bearer ${opts.token}`, 'Content-Type': 'application/json' }, timeout: 30000 },
+    );
+    const { ref, uploadUrl, method, formFields } = requestRes.data ?? {};
+    if (typeof ref !== 'string' || typeof uploadUrl !== 'string') {
+        throw new Error('request-upload returned no ref/uploadUrl');
+    }
+
+    // Standalone copy: never send a view onto a larger parent buffer.
+    const standalone = new Uint8Array(encrypted);
+
+    if (method === 'POST') {
+        // S3 presigned POST policy: multipart form with policy fields + file.
+        const form = new FormData();
+        for (const [k, v] of Object.entries((formFields ?? {}) as Record<string, string>)) {
+            form.append(k, v);
+        }
+        form.append('file', new Blob([standalone.buffer as ArrayBuffer], { type: 'application/octet-stream' }), 'blob');
+        await axios.post(uploadUrl, form, { timeout: 60000 });
+    } else {
+        // PUT (local-storage mode) — Bearer only when uploading to our own server.
+        const headers: Record<string, string> = { 'Content-Type': 'application/octet-stream' };
+        if (uploadUrl.startsWith(opts.serverUrl)) {
+            headers['Authorization'] = `Bearer ${opts.token}`;
+        }
+        await axios.put(uploadUrl, standalone.buffer, { headers, timeout: 60000, maxBodyLength: Infinity });
+    }
+
+    return { ref, size: encrypted.length };
+}
 
 export class ApiSessionClient extends EventEmitter {
     private readonly token: string;
@@ -328,6 +377,19 @@ export class ApiSessionClient extends EventEmitter {
         const key = await this.getBlobKey();
         const decrypted = decryptBlob(encrypted, key);
         return decrypted;
+    }
+
+    /** Encrypt + upload an attachment for this session; returns the storage ref. */
+    async uploadAttachment(data: Uint8Array, filename: string): Promise<{ ref: string; size: number }> {
+        const blobKey = await this.getBlobKey();
+        return uploadSessionAttachment({
+            serverUrl: configuration.serverUrl,
+            sessionId: this.sessionId,
+            token: this.token,
+            blobKey,
+            data,
+            filename,
+        });
     }
 
     /**
