@@ -6,6 +6,12 @@ import { Usage } from '../api/types';
  */
 export const PRICING = {
     // --- Claude 4 & Future Models ---
+    'claude-fable-5': {
+        input: 10.0,
+        output: 50.0,
+        cache_write: 12.5,   // 1.25x input
+        cache_read: 1.0      // 0.1x input
+    },
     'claude-4.5-opus': {
         input: 5.0,
         output: 25.0,
@@ -99,7 +105,10 @@ export function calculateCost(usage: Usage, modelId?: string): { total: number, 
     // Fallback if model not found
     if (!pricing) {
         // Try fuzzy matching for common aliases
-        if (modelId?.includes('opus')) {
+        if (modelId?.includes('fable')) {
+            pricing = PRICING['claude-fable-5'];
+        }
+        else if (modelId?.includes('opus')) {
             if (modelId.includes('4.5')) pricing = PRICING['claude-4.5-opus'];
             else if (modelId.includes('4.1')) pricing = PRICING['claude-4.1-opus'];
             else if (modelId.includes('4')) pricing = PRICING['claude-4-opus'];
