@@ -306,6 +306,7 @@ const AllFilesTab = React.memo(function AllFilesTab({
     const [isLoading, setIsLoading] = React.useState(false);
 
     const projectFiles = useSessionProjectFiles(sessionId);
+    const gitStatus = useSessionGitStatus(sessionId);
     const allFiles = projectFiles?.files ?? [];
 
     // Fetch project files into Zustand on mount
@@ -314,11 +315,8 @@ const AllFilesTab = React.memo(function AllFilesTab({
         const pathKey = storage.getState().getSessionPathKey(sessionId);
         if (!pathKey) return;
 
-        // Only fetch if not cached
         const existing = storage.getState().pathProjectFiles[pathKey];
-        if (existing && existing.files.length > 0) return;
-
-        setIsLoading(true);
+        setIsLoading(!existing || existing.files.length === 0);
         (async () => {
             for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
                 try {
@@ -338,7 +336,7 @@ const AllFilesTab = React.memo(function AllFilesTab({
             if (!cancelled) setIsLoading(false);
         })();
         return () => { cancelled = true; };
-    }, [sessionId]);
+    }, [sessionId, gitStatus?.lastUpdatedAt]);
 
     const tree = React.useMemo(() => buildTree(allFiles), [allFiles]);
     const filteredTree = React.useMemo(

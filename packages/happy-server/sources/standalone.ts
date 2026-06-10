@@ -163,13 +163,25 @@ function findStaticDir(): string | undefined {
 }
 
 // CLI — only when this file is invoked directly, not when imported as a library.
-const invokedFile = process.argv[1] ? path.resolve(process.argv[1]) : "";
-const isDirectInvocation =
-    invokedFile.endsWith("/standalone.ts") ||
-    invokedFile.endsWith("/standalone.js") ||
-    invokedFile.endsWith("/standalone.mjs") ||
-    invokedFile.endsWith("/standalone.cjs") ||
-    invokedFile.endsWith("/happy-server");
+const standaloneEntrypoints = new Set([
+    "standalone.ts",
+    "standalone.js",
+    "standalone.mjs",
+    "standalone.cjs",
+    "happy-server",
+    "happy-server.exe",
+]);
+
+export function isStandaloneEntrypoint(invokedFile: string): boolean {
+    // Normalize Windows separators first: on POSIX, path.basename treats
+    // backslashes as ordinary characters, so a Windows-style argv[1] would
+    // never match (upstream's own cross-platform test fails on Linux).
+    const normalized = invokedFile.replace(/\\/g, '/');
+    return standaloneEntrypoints.has(path.posix.basename(normalized).toLowerCase());
+}
+
+const invokedFile = process.argv[1] || "";
+const isDirectInvocation = isStandaloneEntrypoint(invokedFile);
 
 if (isDirectInvocation) {
     const command = process.argv[2];

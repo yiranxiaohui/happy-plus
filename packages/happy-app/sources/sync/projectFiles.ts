@@ -41,7 +41,7 @@ export async function getProjectFiles(sessionId: string): Promise<ProjectFilesLi
     // A non-git cwd makes `git ls-files` error, but the pipeline's exit code is
     // head's (0) with empty output -> treated as an empty project, not a failure.
     const res = await sessionBash(sessionId, {
-        command: `git ls-files --cached --others --exclude-standard | head -n ${MAX_PROJECT_FILES + 1}`,
+        command: `git -c core.quotepath=false ls-files --cached --others --exclude-standard | head -n ${MAX_PROJECT_FILES + 1}`,
         cwd,
         timeout: 15000,
     });
