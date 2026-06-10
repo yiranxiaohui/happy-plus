@@ -1,82 +1,80 @@
-# Stage 1: install dependencies with workspace context
-FROM node:20 AS deps
+# Slim server image (~1.3GB, was ~6GB).
+# Instead of copying the whole ~4.5GB workspace node_modules (dominated by the
+# React Native app's native deps the server never uses), `pnpm deploy` a
+# server-only node_modules and run on node:20-slim. Keeps the tsx-from-source
+# runtime model (tsx is a devDep, so deploy runs WITHOUT --prod to include it).
+# The generated Prisma client is copied (deref'd) from the full install since
+# pnpm deploy doesn't carry .prisma/client. Verified: boots, Prisma connects,
+# serves bundled webapp + API.
 
-# Install build dependencies
+# Stage 1: install full workspace (needed to build wire + resolve server deps)
+FROM node:20 AS deps
 RUN apt-get update && apt-get install -y python3 ffmpeg make g++ build-essential && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
-
 WORKDIR /repo
-
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY scripts ./scripts
 COPY patches ./patches
-
 RUN mkdir -p packages/happy-app packages/happy-server packages/happy-cli packages/happy-wire
-
 COPY packages/happy-app/package.json packages/happy-app/
 COPY packages/happy-server/package.json packages/happy-server/
 COPY packages/happy-cli/package.json packages/happy-cli/
 COPY packages/happy-wire/package.json packages/happy-wire/
-
-# Workspace postinstall requirements
 COPY packages/happy-app/patches packages/happy-app/patches
 COPY packages/happy-server/prisma packages/happy-server/prisma
 COPY packages/happy-cli/scripts packages/happy-cli/scripts
 COPY packages/happy-cli/tools packages/happy-cli/tools
-
 RUN SKIP_HAPPY_WIRE_BUILD=1 pnpm install --frozen-lockfile
 
-# Stage 2: build the server
+# Stage 2: build wire + produce a pruned, server-only deploy at /out
 FROM deps AS builder
-
 COPY packages/happy-wire ./packages/happy-wire
 COPY packages/happy-server ./packages/happy-server
-
 RUN pnpm --filter @slopus/happy-wire build
-# happy-server-self-host's `build` runs typecheck + bun-bundles a standalone
-# binary that this docker image does not use (runtime is `tsx ./sources/main.ts`).
-# Typecheck also requires the happy-app sources which aren't in this build
-# context, so we skip the build step entirely.
+# deploy (NOT --prod: the runtime is `tsx sources/main.ts`, tsx is a devDep).
+# --legacy avoids the pnpm10 inject-workspace-packages requirement. /out gets a
+# node_modules with only happy-server's graph (+ injected @slopus/happy-wire),
+# i.e. WITHOUT happy-app's huge native deps.
+RUN pnpm --filter happy-server-self-host deploy --legacy /out
+# Carry the already-generated Prisma client into the pruned tree. The deps-stage
+# postinstall already ran `prisma generate` into /repo/node_modules; copy the
+# generated client + engines over (pnpm deploy doesn't reliably carry the
+# generated .prisma/client, and re-running generate needs the custom
+# prisma-json-types-generator on PATH, which only produces compile-time TS types
+# the tsx runtime never needs).
+RUN mkdir -p /out/node_modules/.prisma /out/node_modules/@prisma && \
+    cp -rL /repo/node_modules/.prisma/. /out/node_modules/.prisma/ && \
+    cp -rL /repo/node_modules/@prisma/. /out/node_modules/@prisma/
+# Sanity: surface what we have (visible in build logs).
+RUN echo "=== /out size ===" && du -sh /out /out/node_modules && \
+    echo "=== tsx present? ===" && ls /out/node_modules/.bin/tsx && \
+    echo "=== prisma client? ===" && ls /out/node_modules/.prisma/client/*.node 2>/dev/null | head -1 || true
 
-# Stage 2b: build the web client, to be served from the same origin as the API
-# (single-service deploy). With the web client's dynamic same-origin server URL,
-# no HAPPY_SERVER_URL needs to be baked — the app talks to whatever host serves it.
+# Stage 2b: build the web client (same-origin), unchanged
 FROM deps AS webapp
-
 ENV NODE_ENV=production
 ENV APP_ENV=production
-
 COPY packages/happy-wire ./packages/happy-wire
 COPY packages/happy-app ./packages/happy-app
-
 RUN pnpm --filter @slopus/happy-wire build
 RUN pnpm --filter happy-app exec expo export --platform web --output-dir dist
 
-# Stage 3: runtime
-FROM node:20 AS runner
-
-WORKDIR /repo
-
-# Runtime dependencies
-RUN apt-get update && apt-get install -y python3 ffmpeg && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
-
-# Set environment to production
+# Stage 3: slim runtime
+FROM node:20-slim AS runner
+# openssl/ca-certificates: Prisma query engine needs libssl at runtime.
+# ffmpeg/python3: media processing (kept for feature parity).
+RUN apt-get update && apt-get install -y python3 ffmpeg openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
-
-# Copy necessary files from the builder stage
-COPY --from=builder /repo/node_modules /repo/node_modules
-COPY --from=builder /repo/packages/happy-wire /repo/packages/happy-wire
-COPY --from=builder /repo/packages/happy-server /repo/packages/happy-server
-
-# Bundle the web client so the server serves it same-origin with the API.
-# main.ts -> findStaticDir() picks this up via HAPPY_STATIC_DIR.
-COPY --from=webapp /repo/packages/happy-app/dist /repo/packages/happy-server/webapp
-ENV HAPPY_STATIC_DIR=/repo/packages/happy-server/webapp
-
-# Expose the port the app will run on
+WORKDIR /app
+# Pruned deps + prisma schema/client (+ generated engine) from the deploy.
+COPY --from=builder /out/node_modules ./node_modules
+COPY --from=builder /out/prisma ./prisma
+COPY --from=builder /out/package.json ./package.json
+# Source + tsconfig (the `files` field excludes sources; runtime runs them via tsx).
+COPY --from=builder /repo/packages/happy-server/sources ./sources
+COPY --from=builder /repo/packages/happy-server/tsconfig.json ./tsconfig.json
+# Bundled web client, served same-origin.
+COPY --from=webapp /repo/packages/happy-app/dist ./webapp
+ENV HAPPY_STATIC_DIR=/app/webapp
 EXPOSE 3000
-
-# Command to run the application
-COPY --from=builder /repo/package.json /repo/pnpm-workspace.yaml /repo/
-CMD ["pnpm", "--filter", "happy-server-self-host", "start"]
+CMD ["./node_modules/.bin/tsx", "sources/main.ts"]
