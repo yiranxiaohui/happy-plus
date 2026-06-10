@@ -385,6 +385,28 @@ describe('mapClaudeLogMessageToSessionEnvelopes', () => {
         expect(result.envelopes.some(e => e.ev.t === 'tool-call-end')).toBe(true);
     });
 
+    it('does not collect images from hidden-parent tool results', () => {
+        const state: any = { currentTurnId: 't-1', hiddenParentToolCalls: new Set(['call-hidden']) };
+        const result = mapClaudeLogMessageToSessionEnvelopes({
+            type: 'user',
+            uuid: 'u-img-hidden',
+            message: {
+                role: 'user',
+                content: [{
+                    type: 'tool_result',
+                    tool_use_id: 'call-hidden',
+                    content: [
+                        { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'aGlkZGVu' } },
+                    ],
+                }],
+            },
+            timestamp: '2025-01-01T00:00:03.500Z',
+        } as any, state);
+
+        expect(result.pendingImages).toEqual([]);
+        expect(result.envelopes.some(e => e.ev.t === 'tool-call-end')).toBe(false);
+    });
+
     it('returns empty pendingImages when no images present', () => {
         const result = mapClaudeLogMessageToSessionEnvelopes({
             type: 'user',

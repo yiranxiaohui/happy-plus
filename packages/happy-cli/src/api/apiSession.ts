@@ -18,13 +18,15 @@ import {
     closeClaudeTurnWithStatus,
     mapClaudeLogMessageToSessionEnvelopes,
     type ClaudeSessionProtocolState,
+    type PendingImage,
 } from '@/claude/utils/sessionProtocolMapper';
 import { InvalidateSync } from '@/utils/sync';
 import { getImageSize } from '@/utils/imageSize';
 import { createId } from '@paralleldrive/cuid2';
 import axios from 'axios';
 
-const MAX_AGENT_IMAGE_BYTES = 10 * 1024 * 1024;
+const SECRETBOX_OVERHEAD = 24 + 16; // nonce + auth tag added by encryptBlob
+const MAX_AGENT_IMAGE_BYTES = 10 * 1024 * 1024 - SECRETBOX_OVERHEAD;
 
 const IMAGE_EXT: Record<string, string> = {
     'image/png': 'png',
@@ -39,7 +41,7 @@ const IMAGE_EXT: Record<string, string> = {
  * the deps are tiny closures bound to a session.
  */
 export async function processPendingImages(
-    images: Array<{ base64: string; mediaType: string }>,
+    images: PendingImage[],
     deps: {
         upload: (data: Uint8Array, filename: string) => Promise<{ ref: string; size: number }>;
         emitFileEnvelope: (file: { ref: string; name: string; size: number; mimeType: string; image?: { width: number; height: number } }) => void;
@@ -47,13 +49,13 @@ export async function processPendingImages(
     },
 ): Promise<void> {
     for (const img of images) {
-        let data: Uint8Array;
-        try {
-            data = new Uint8Array(Buffer.from(img.base64, 'base64'));
-        } catch {
-            deps.emitTextEnvelope('[image: upload failed]');
+        // Pre-check on the base64 length so we never materialize a huge buffer
+        // just to reject it (base64 encodes 3 bytes per 4 chars).
+        if (img.base64.length > (MAX_AGENT_IMAGE_BYTES * 4) / 3 + 4) {
+            deps.emitTextEnvelope('[image: too large to display]');
             continue;
         }
+        const data = new Uint8Array(Buffer.from(img.base64, 'base64'));
         if (data.length > MAX_AGENT_IMAGE_BYTES) {
             deps.emitTextEnvelope('[image: too large to display]');
             continue;
