@@ -13,14 +13,66 @@ import { RpcHandlerManager } from './rpc/RpcHandlerManager';
 import { registerCommonHandlers } from '../modules/common/registerCommonHandlers';
 import { calculateCost } from '@/utils/pricing';
 import { shouldReconnect } from '@/utils/lidState';
-import { type SessionEnvelope, type SessionTurnEndStatus } from '@slopus/happy-wire';
+import { createEnvelope, type SessionEnvelope, type SessionTurnEndStatus } from '@slopus/happy-wire';
 import {
     closeClaudeTurnWithStatus,
     mapClaudeLogMessageToSessionEnvelopes,
     type ClaudeSessionProtocolState,
 } from '@/claude/utils/sessionProtocolMapper';
 import { InvalidateSync } from '@/utils/sync';
+import { getImageSize } from '@/utils/imageSize';
+import { createId } from '@paralleldrive/cuid2';
 import axios from 'axios';
+
+const MAX_AGENT_IMAGE_BYTES = 10 * 1024 * 1024;
+
+const IMAGE_EXT: Record<string, string> = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+};
+
+/**
+ * Upload agent-produced images and emit `file` envelopes (or placeholder
+ * text on failure). Extracted from the client class for testability —
+ * the deps are tiny closures bound to a session.
+ */
+export async function processPendingImages(
+    images: Array<{ base64: string; mediaType: string }>,
+    deps: {
+        upload: (data: Uint8Array, filename: string) => Promise<{ ref: string; size: number }>;
+        emitFileEnvelope: (file: { ref: string; name: string; size: number; mimeType: string; image?: { width: number; height: number } }) => void;
+        emitTextEnvelope: (text: string) => void;
+    },
+): Promise<void> {
+    for (const img of images) {
+        let data: Uint8Array;
+        try {
+            data = new Uint8Array(Buffer.from(img.base64, 'base64'));
+        } catch {
+            deps.emitTextEnvelope('[image: upload failed]');
+            continue;
+        }
+        if (data.length > MAX_AGENT_IMAGE_BYTES) {
+            deps.emitTextEnvelope('[image: too large to display]');
+            continue;
+        }
+        const ext = IMAGE_EXT[img.mediaType] ?? 'bin';
+        const name = `image-${createId().slice(0, 8)}.${ext}`;
+        try {
+            const { ref, size } = await deps.upload(data, name);
+            const dims = getImageSize(data);
+            deps.emitFileEnvelope({
+                ref, name, size, mimeType: img.mediaType,
+                ...(dims ? { image: dims } : {}),
+            });
+        } catch (error) {
+            logger.debug('[SOCKET] Agent image upload failed:', error);
+            deps.emitTextEnvelope('[image: upload failed]');
+        }
+    }
+}
 
 /**
  * ACP (Agent Communication Protocol) message data types.
@@ -564,6 +616,20 @@ export class ApiSessionClient extends EventEmitter {
         this.claudeSessionProtocolState.currentTurnId = mapped.currentTurnId;
         for (const envelope of mapped.envelopes) {
             this.sendSessionProtocolMessage(envelope);
+        }
+        if (mapped.pendingImages.length > 0) {
+            const turn = this.claudeSessionProtocolState.currentTurnId ?? undefined;
+            processPendingImages(mapped.pendingImages, {
+                upload: (data, filename) => this.uploadAttachment(data, filename),
+                emitFileEnvelope: (file) => {
+                    this.sendSessionProtocolMessage(createEnvelope('agent', { t: 'file', ...file }, turn ? { turn } : {}));
+                },
+                emitTextEnvelope: (text) => {
+                    this.sendSessionProtocolMessage(createEnvelope('agent', { t: 'text', text }, turn ? { turn } : {}));
+                },
+            }).catch((error) => {
+                logger.debug('[SOCKET] processPendingImages crashed:', error);
+            });
         }
         // Track usage from assistant messages
         if (body.type === 'assistant' && body.message?.usage) {
