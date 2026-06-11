@@ -14,6 +14,7 @@ import { readDaemonState } from '@/persistence'
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { projectPath } from '@/projectPath'
+import { BIN_NAME } from '@/ui/binName'
 import packageJson from '../../package.json'
 
 /**
@@ -94,7 +95,7 @@ export async function runDoctorDaemon(): Promise<void> {
         console.log(chalk.red('❌ Error checking daemon status'));
     }
 
-    console.log(chalk.gray('\nRun `happy doctor` for full diagnostics.\n'));
+    console.log(chalk.gray(`\nRun \`${BIN_NAME} doctor\` for full diagnostics.\n`));
 }
 
 /**

@@ -6,6 +6,7 @@ import { ApiMachineClient } from './apiMachine';
 import { decodeBase64, encodeBase64, getRandomBytes, encrypt, decrypt, libsodiumEncryptForPublicKey } from './encryption';
 import { PushNotificationClient } from './pushNotifications';
 import { configuration } from '@/configuration';
+import { BIN_NAME } from '@/ui/binName';
 import chalk from 'chalk';
 import { Credentials } from '@/persistence';
 import { connectionState, isNetworkError } from '@/utils/serverConnectionErrors';
@@ -240,7 +241,7 @@ export class ApiClient {
             `   → This usually happens after re-authenticating with a different account`
           ));
           console.log(chalk.yellow(
-            `   → Run 'happy doctor clean' to reset local state and generate a new machine ID`
+            `   → Run '${BIN_NAME} doctor clean' to reset local state and generate a new machine ID`
           ));
           console.log(chalk.yellow(
             `   → Open a GitHub issue if this problem persists`

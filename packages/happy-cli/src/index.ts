@@ -34,6 +34,7 @@ import { extractNoSandboxFlag } from './utils/sandboxFlags'
 import { handleResumeCommand } from '@/resume/handleResumeCommand'
 import { ensureDaemonRunning } from './daemon/ensureDaemonRunning'
 import { handleCodexCommand } from './commands/codexCommand'
+import { BIN_NAME } from './ui/binName'
 
 
 (async () => {
@@ -56,10 +57,10 @@ import { handleCodexCommand } from './commands/codexCommand'
     if (args[1] === 'clean') {
       if (args.slice(2).some(a => a === '--help' || a === '-h')) {
         console.log(`
-${chalk.bold('happy doctor clean')} - Kill all happy-related processes (daemon + sessions)
+${chalk.bold(`${BIN_NAME} doctor clean`)} - Kill all happy-related processes (daemon + sessions)
 
 ${chalk.bold('Usage:')}
-  happy doctor clean
+  ${BIN_NAME} doctor clean
 
 ${chalk.bold('Warning:')} This is destructive — it terminates the daemon and every running session.
 Conversation history is preserved on the server, but in-flight tool calls are interrupted.
@@ -301,7 +302,7 @@ Conversation history is preserved on the server, but in-flight tool calls are in
           console.log('No Google Cloud Project configured.');
           console.log('');
           console.log('If you see "Authentication required" error, you may need to set a project:');
-          console.log('  happy gemini project set <your-project-id>');
+          console.log(`  ${BIN_NAME} gemini project set <your-project-id>`);
           console.log('');
           console.log('This is required for Google Workspace accounts.');
           console.log('Guide: https://goo.gle/gemini-cli-auth-docs#workspace-gca');
@@ -315,7 +316,7 @@ Conversation history is preserved on the server, but in-flight tool calls are in
     
     // Handle "happy gemini project" (no subcommand) - show help
     if (geminiSubcommand === 'project' && !args[2]) {
-      console.log('Usage: happy gemini project <command>');
+      console.log(`Usage: ${BIN_NAME} gemini project <command>`);
       console.log('');
       console.log('Commands:');
       console.log('  set <project-id>   Set Google Cloud Project ID');
@@ -441,7 +442,7 @@ Conversation history is preserved on the server, but in-flight tool calls are in
     return;
   } else if (subcommand === 'logout') {
     // Keep for backward compatibility - redirect to auth logout
-    console.log(chalk.yellow('Note: "happy logout" is deprecated. Use "happy auth logout" instead.\n'));
+    console.log(chalk.yellow(`Note: "${BIN_NAME} logout" is deprecated. Use "${BIN_NAME} auth logout" instead.\n`));
     try {
       await handleAuthCommand(['logout']);
     } catch (error) {
@@ -558,20 +559,20 @@ Conversation history is preserved on the server, but in-flight tool calls are in
       }
     } else {
       console.log(`
-${chalk.bold('happy daemon')} - Daemon management
+${chalk.bold(`${BIN_NAME} daemon`)} - Daemon management
 
 ${chalk.bold('Usage:')}
-  happy daemon start              Start the daemon (detached)
-  happy daemon stop               Stop the daemon (sessions stay alive)
-  happy daemon status             Show daemon status
-  happy daemon list               List active sessions
+  ${BIN_NAME} daemon start              Start the daemon (detached)
+  ${BIN_NAME} daemon stop               Stop the daemon (sessions stay alive)
+  ${BIN_NAME} daemon status             Show daemon status
+  ${BIN_NAME} daemon list               List active sessions
 
-  If you want to kill all happy related processes run 
-  ${chalk.cyan('happy doctor clean')}
+  If you want to kill all happy related processes run
+  ${chalk.cyan(`${BIN_NAME} doctor clean`)}
 
 ${chalk.bold('Note:')} The daemon runs in the background and manages Claude sessions.
 
-${chalk.bold('To clean up runaway processes:')} Use ${chalk.cyan('happy doctor clean')}
+${chalk.bold('To clean up runaway processes:')} Use ${chalk.cyan(`${BIN_NAME} doctor clean`)}
 `)
     }
     return;
@@ -671,45 +672,45 @@ ${chalk.bold('To clean up runaway processes:')} Use ${chalk.cyan('happy doctor c
     // Show help
     if (showHelp) {
       console.log(`
-${chalk.bold('happy')} - Claude Code On the Go
+${chalk.bold(BIN_NAME)} - Claude Code On the Go
 
 ${chalk.bold('Usage:')}
-  happy [options]         Start Claude with mobile control
-  happy auth              Manage authentication
-  happy resume            Resume a previous Happy session by Happy session ID
-  happy codex             Start Codex mode
-  happy gemini            Start Gemini mode (ACP)
-  happy acp               Start a generic ACP-compatible agent
-  happy connect           Connect AI vendor API keys
-  happy sandbox           Configure and manage OS-level sandboxing
-  happy notify            Send push notification
-  happy daemon            Manage background service that allows
+  ${BIN_NAME} [options]         Start Claude with mobile control
+  ${BIN_NAME} auth              Manage authentication
+  ${BIN_NAME} resume            Resume a previous Happy session by Happy session ID
+  ${BIN_NAME} codex             Start Codex mode
+  ${BIN_NAME} gemini            Start Gemini mode (ACP)
+  ${BIN_NAME} acp               Start a generic ACP-compatible agent
+  ${BIN_NAME} connect           Connect AI vendor API keys
+  ${BIN_NAME} sandbox           Configure and manage OS-level sandboxing
+  ${BIN_NAME} notify            Send push notification
+  ${BIN_NAME} daemon            Manage background service that allows
                             to spawn new sessions away from your computer
-  happy doctor            System diagnostics & troubleshooting
+  ${BIN_NAME} doctor            System diagnostics & troubleshooting
 
 ${chalk.bold('Examples:')}
-  happy                    Start session
-  happy resume cmmij8      Resume a previous session by Happy session ID
-  happy --yolo             Start with bypassing permissions
+  ${BIN_NAME}                    Start session
+  ${BIN_NAME} resume cmmij8      Resume a previous session by Happy session ID
+  ${BIN_NAME} --yolo             Start with bypassing permissions
                             happy sugar for --dangerously-skip-permissions
-  happy --chrome           Enable Chrome browser access for this session
-  happy --no-chrome        Disable Chrome even if default is on
-  happy --no-sandbox       Disable Happy sandbox for this session
-  happy --js-runtime bun   Use bun instead of node to spawn Claude Code
-  happy --claude-env ANTHROPIC_BASE_URL=http://127.0.0.1:3456
+  ${BIN_NAME} --chrome           Enable Chrome browser access for this session
+  ${BIN_NAME} --no-chrome        Disable Chrome even if default is on
+  ${BIN_NAME} --no-sandbox       Disable Happy sandbox for this session
+  ${BIN_NAME} --js-runtime bun   Use bun instead of node to spawn Claude Code
+  ${BIN_NAME} --claude-env ANTHROPIC_BASE_URL=http://127.0.0.1:3456
                            Use a custom API endpoint (e.g., claude-code-router)
-  happy acp gemini         Start Gemini via generic ACP runner
-  happy acp -- opencode --acp
+  ${BIN_NAME} acp gemini         Start Gemini via generic ACP runner
+  ${BIN_NAME} acp -- opencode --acp
                            Start a custom ACP command
-  happy acp opencode --verbose
+  ${BIN_NAME} acp opencode --verbose
                            Print raw ACP backend/envelope events
-  happy auth login --force Authenticate
-  happy doctor             Run diagnostics
+  ${BIN_NAME} auth login --force Authenticate
+  ${BIN_NAME} doctor             Run diagnostics
 
 ${chalk.bold('Happy supports ALL Claude options!')}
-  Use any claude flag with happy as you would with claude. Our favorite:
+  Use any claude flag with ${BIN_NAME} as you would with claude. Our favorite:
 
-  happy --resume
+  ${BIN_NAME} --resume
 
 ${chalk.gray('─'.repeat(60))}
 ${chalk.bold.cyan('Claude Code Options (from `claude --help`):')}
@@ -729,7 +730,7 @@ ${chalk.bold.cyan('Claude Code Options (from `claude --help`):')}
 
     // Show version
     if (showVersion) {
-      console.log(`happy version: ${packageJson.version}`)
+      console.log(`${BIN_NAME} version: ${packageJson.version}`)
       // Don't exit - continue to pass --version to Claude Code
     }
 
@@ -779,34 +780,34 @@ async function handleNotifyCommand(args: string[]): Promise<void> {
 
   if (showHelp) {
     console.log(`
-${chalk.bold('happy notify')} - Send notification
+${chalk.bold(`${BIN_NAME} notify`)} - Send notification
 
 ${chalk.bold('Usage:')}
-  happy notify -p <message> [-t <title>]    Send notification with custom message and optional title
-  happy notify -h, --help                   Show this help
+  ${BIN_NAME} notify -p <message> [-t <title>]    Send notification with custom message and optional title
+  ${BIN_NAME} notify -h, --help                   Show this help
 
 ${chalk.bold('Options:')}
   -p <message>    Notification message (required)
   -t <title>      Notification title (optional, defaults to "Happy")
 
 ${chalk.bold('Examples:')}
-  happy notify -p "Deployment complete!"
-  happy notify -p "System update complete" -t "Server Status"
-  happy notify -t "Alert" -p "Database connection restored"
+  ${BIN_NAME} notify -p "Deployment complete!"
+  ${BIN_NAME} notify -p "System update complete" -t "Server Status"
+  ${BIN_NAME} notify -t "Alert" -p "Database connection restored"
 `)
     return
   }
 
   if (!message) {
     console.error(chalk.red('Error: Message is required. Use -p "your message" to specify the notification text.'))
-    console.log(chalk.gray('Run "happy notify --help" for usage information.'))
+    console.log(chalk.gray(`Run "${BIN_NAME} notify --help" for usage information.`))
     process.exit(1)
   }
 
   // Load credentials
   let credentials = await readCredentials()
   if (!credentials) {
-    console.error(chalk.red('Error: Not authenticated. Please run "happy auth login" first.'))
+    console.error(chalk.red(`Error: Not authenticated. Please run "${BIN_NAME} auth login" first.`))
     process.exit(1)
   }
 

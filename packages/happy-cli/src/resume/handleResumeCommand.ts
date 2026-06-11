@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 
 import type { Metadata } from '@/api/types';
 import { spawnHappyCLI } from '@/utils/spawnHappyCLI';
+import { BIN_NAME } from '@/ui/binName';
 
 import { resolveHappySession, type ResumableHappySession } from './resolveHappySession';
 
@@ -87,14 +88,14 @@ export function buildResumeLaunch(session: ResumableHappySession, options: Resum
 
 export function formatResumeHelp(): string {
     return [
-        'happy resume - Resume a previous Happy session',
+        `${BIN_NAME} resume - Resume a previous Happy session`,
         '',
         'Usage:',
-        '  happy resume <happy-session-id>',
+        `  ${BIN_NAME} resume <happy-session-id>`,
         '',
         'Examples:',
-        '  happy resume cmmij8olq00dp5jcxr3wtbpau',
-        '  happy resume cmmij8',
+        `  ${BIN_NAME} resume cmmij8olq00dp5jcxr3wtbpau`,
+        `  ${BIN_NAME} resume cmmij8`,
         '',
         'This reuses the saved worktree/path and resumes the underlying agent session',
         'when the backend supports it.',

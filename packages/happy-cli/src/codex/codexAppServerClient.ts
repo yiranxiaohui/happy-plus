@@ -17,6 +17,7 @@ import { execSync, type ChildProcess } from 'node:child_process';
 import { spawn as crossSpawn } from 'cross-spawn';
 import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
 import { logger } from '@/ui/logger';
+import { BIN_NAME } from '@/ui/binName';
 import type {
     InitializeParams,
     NewConversationParams,
@@ -441,7 +442,7 @@ export class CodexAppServerClient {
                 'Please install Codex CLI using one of these methods:\n\n' +
                 'Option 1 - npm (recommended):\n  npm install -g @openai/codex\n\n' +
                 'Option 2 - Homebrew (macOS):\n  brew install --cask codex\n\n' +
-                'Alternatively, use Claude Code:\n  happy claude',
+                `Alternatively, use Claude Code:\n  ${BIN_NAME} claude`,
             );
         }
 

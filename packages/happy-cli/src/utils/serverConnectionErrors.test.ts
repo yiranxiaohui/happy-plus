@@ -17,6 +17,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { startOfflineReconnection, printOfflineWarning, connectionState, isNetworkError, NETWORK_ERROR_CODES } from './serverConnectionErrors';
+import { BIN_NAME } from '@/ui/binName';
 
 // Mock axios - only isAxiosError needed for error type detection
 vi.mock('axios', () => ({
@@ -269,7 +270,7 @@ describe('startOfflineReconnection', () => {
 
             expect(attemptCount).toBe(1);
             expect(onNotify).toHaveBeenCalledWith(
-                '❌ Authentication failed. Please re-authenticate with `happy auth`.'
+                `❌ Authentication failed. Please re-authenticate with \`${BIN_NAME} auth\`.`
             );
             expect(onReconnected).not.toHaveBeenCalled();
 

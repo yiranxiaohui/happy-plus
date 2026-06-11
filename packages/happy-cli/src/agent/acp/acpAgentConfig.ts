@@ -1,3 +1,5 @@
+import { BIN_NAME } from '@/ui/binName';
+
 export type AcpAgentConfig = {
   command: string;
   args: string[];
@@ -16,13 +18,13 @@ export type ResolvedAcpAgentConfig = {
 
 export function resolveAcpAgentConfig(cliArgs: string[]): ResolvedAcpAgentConfig {
   if (cliArgs.length === 0) {
-    throw new Error('Usage: happy acp <agent-name> or happy acp -- <command> [args]');
+    throw new Error(`Usage: ${BIN_NAME} acp <agent-name> or ${BIN_NAME} acp -- <command> [args]`);
   }
 
   if (cliArgs[0] === '--') {
     const command = cliArgs[1];
     if (!command) {
-      throw new Error('Missing command after "--". Usage: happy acp -- <command> [args]');
+      throw new Error(`Missing command after "--". Usage: ${BIN_NAME} acp -- <command> [args]`);
     }
     return {
       agentName: command,

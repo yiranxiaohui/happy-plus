@@ -8,6 +8,7 @@ import { authenticateCodex } from './connect/authenticateCodex';
 import { authenticateClaude } from './connect/authenticateClaude';
 import { authenticateGemini } from './connect/authenticateGemini';
 import { decodeJwtPayload } from './connect/utils';
+import { BIN_NAME } from '@/ui/binName';
 
 /**
  * Handle connect subcommand
@@ -48,14 +49,14 @@ export async function handleConnectCommand(args: string[]): Promise<void> {
 
 function showConnectHelp(): void {
     console.log(`
-${chalk.bold('happy connect')} - Connect AI vendor API keys to Happy cloud
+${chalk.bold(`${BIN_NAME} connect`)} - Connect AI vendor API keys to Happy cloud
 
 ${chalk.bold('Usage:')}
-  happy connect codex        Store your Codex API key in Happy cloud
-  happy connect claude       Store your Anthropic API key in Happy cloud
-  happy connect gemini       Store your Gemini API key in Happy cloud
-  happy connect status       Show connection status for all vendors
-  happy connect help         Show this help message
+  ${BIN_NAME} connect codex        Store your Codex API key in Happy cloud
+  ${BIN_NAME} connect claude       Store your Anthropic API key in Happy cloud
+  ${BIN_NAME} connect gemini       Store your Gemini API key in Happy cloud
+  ${BIN_NAME} connect status       Show connection status for all vendors
+  ${BIN_NAME} connect help         Show this help message
 
 ${chalk.bold('Description:')}
   The connect command allows you to securely store your AI vendor API keys
@@ -63,13 +64,13 @@ ${chalk.bold('Description:')}
   without exposing your API keys locally.
 
 ${chalk.bold('Examples:')}
-  happy connect codex
-  happy connect claude
-  happy connect gemini
-  happy connect status
+  ${BIN_NAME} connect codex
+  ${BIN_NAME} connect claude
+  ${BIN_NAME} connect gemini
+  ${BIN_NAME} connect status
 
 ${chalk.bold('Notes:')} 
-  • You must be authenticated with Happy first (run 'happy auth login')
+  • You must be authenticated with Happy first (run '${BIN_NAME} auth login')
   • API keys are encrypted and stored securely in Happy cloud
   • You can manage your stored keys at app.yunnet.top
 `);
@@ -82,7 +83,7 @@ async function handleConnectVendor(vendor: 'codex' | 'claude' | 'gemini', displa
     const credentials = await readCredentials();
     if (!credentials) {
         console.log(chalk.yellow('⚠️  Not authenticated with Happy'));
-        console.log(chalk.gray('  Please run "happy auth login" first'));
+        console.log(chalk.gray(`  Please run "${BIN_NAME} auth login" first`));
         process.exit(1);
     }
 
@@ -127,7 +128,7 @@ async function handleConnectStatus(): Promise<void> {
     const credentials = await readCredentials();
     if (!credentials) {
         console.log(chalk.yellow('⚠️  Not authenticated with Happy'));
-        console.log(chalk.gray('  Please run "happy auth login" first'));
+        console.log(chalk.gray(`  Please run "${BIN_NAME} auth login" first`));
         process.exit(1);
     }
 

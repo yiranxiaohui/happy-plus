@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import { BIN_NAME } from '@/ui/binName';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import {
@@ -159,7 +160,7 @@ export async function handleSandboxStatus(): Promise<void> {
     const config = settings.sandboxConfig;
 
     if (!config) {
-        console.log('Sandbox is not configured. Run `happy sandbox configure`.');
+        console.log(`Sandbox is not configured. Run \`${BIN_NAME} sandbox configure\`.`);
         return;
     }
 
@@ -188,12 +189,12 @@ export async function handleSandboxDisable(): Promise<void> {
 
 export function handleSandboxHelp(): void {
     console.log(`
-${chalk.bold('happy sandbox')} - Sandbox management
+${chalk.bold(`${BIN_NAME} sandbox`)} - Sandbox management
 
 ${chalk.bold('Usage:')}
-  happy sandbox configure      Configure sandbox settings interactively
-  happy sandbox status         Show current sandbox configuration
-  happy sandbox disable        Disable sandboxing
-  happy sandbox help           Show this help
+  ${BIN_NAME} sandbox configure      Configure sandbox settings interactively
+  ${BIN_NAME} sandbox status         Show current sandbox configuration
+  ${BIN_NAME} sandbox disable        Disable sandboxing
+  ${BIN_NAME} sandbox help           Show this help
 `);
 }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SandboxConfig } from '@/persistence';
+import { BIN_NAME } from '@/ui/binName';
 import {
     detectWorkspaceRootSuggestions,
     handleSandboxCommand,
@@ -55,7 +56,7 @@ describe('handleSandboxCommand', () => {
         await handleSandboxCommand(['status']);
 
         expect(mockReadSettings).toHaveBeenCalledTimes(1);
-        expect(logSpy).toHaveBeenCalledWith('Sandbox is not configured. Run `happy sandbox configure`.');
+        expect(logSpy).toHaveBeenCalledWith(`Sandbox is not configured. Run \`${BIN_NAME} sandbox configure\`.`);
     });
 
     it('routes disable subcommand', async () => {
@@ -94,7 +95,7 @@ describe('handleSandboxStatus', () => {
 
         await handleSandboxStatus();
 
-        expect(logSpy).toHaveBeenCalledWith('Sandbox is not configured. Run `happy sandbox configure`.');
+        expect(logSpy).toHaveBeenCalledWith(`Sandbox is not configured. Run \`${BIN_NAME} sandbox configure\`.`);
     });
 
     it('prints formatted sandbox configuration when present', async () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildResumeLaunch, formatResumeHelp, parseResumeCommandArgs } from './handleResumeCommand';
+import { BIN_NAME } from '@/ui/binName';
 
 describe('parseResumeCommandArgs', () => {
     it('parses the happy session id', () => {
@@ -84,6 +85,6 @@ describe('buildResumeLaunch', () => {
 
 describe('formatResumeHelp', () => {
     it('mentions the session id command shape', () => {
-        expect(formatResumeHelp()).toContain('happy resume <happy-session-id>');
+        expect(formatResumeHelp()).toContain(`${BIN_NAME} resume <happy-session-id>`);
     });
 });

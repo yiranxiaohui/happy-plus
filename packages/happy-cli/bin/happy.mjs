@@ -20,6 +20,14 @@ if (!existsSync(unpackedDir) && existsSync(unpackScript)) {
   }
 }
 
+// Preserve the bin name the user actually invoked (happy vs happy-plus) so
+// help/usage text printed by dist/index.mjs shows runnable commands, even
+// though we re-spawn node with the entrypoint path as argv[1].
+if (!process.env.HAPPY_BIN_NAME) {
+  const invoked = (process.argv[1] || '').split(/[\\/]/).pop().replace(/\.(mjs|cjs|js)$/, '');
+  if (invoked) process.env.HAPPY_BIN_NAME = invoked;
+}
+
 // Check if we're already running with the flags
 const hasNoWarnings = process.execArgv.includes('--no-warnings');
 const hasNoDeprecation = process.execArgv.includes('--no-deprecation');

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KNOWN_ACP_AGENTS, resolveAcpAgentConfig } from './acpAgentConfig';
+import { BIN_NAME } from '@/ui/binName';
 
 describe('KNOWN_ACP_AGENTS', () => {
   it('defines built-in Gemini and OpenCode command mappings', () => {
@@ -52,10 +53,10 @@ describe('resolveAcpAgentConfig', () => {
   });
 
   it('throws with helpful usage when no args are provided', () => {
-    expect(() => resolveAcpAgentConfig([])).toThrow('Usage: happy acp <agent-name> or happy acp -- <command> [args]');
+    expect(() => resolveAcpAgentConfig([])).toThrow(`Usage: ${BIN_NAME} acp <agent-name> or ${BIN_NAME} acp -- <command> [args]`);
   });
 
   it('throws when separator form omits command', () => {
-    expect(() => resolveAcpAgentConfig(['--'])).toThrow('Missing command after "--". Usage: happy acp -- <command> [args]');
+    expect(() => resolveAcpAgentConfig(['--'])).toThrow(`Missing command after "--". Usage: ${BIN_NAME} acp -- <command> [args]`);
   });
 });

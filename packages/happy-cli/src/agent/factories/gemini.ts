@@ -13,6 +13,7 @@ import type { AgentBackend, McpServerConfig, AgentFactoryOptions } from '../core
 import { agentRegistry } from '../core';
 import { geminiTransport } from '../transport';
 import { logger } from '@/ui/logger';
+import { BIN_NAME } from '@/ui/binName';
 import { 
   GEMINI_API_KEY_ENV, 
   GOOGLE_API_KEY_ENV, 
@@ -89,7 +90,7 @@ export function createGeminiBackend(options: GeminiBackendOptions): GeminiBacken
     || options.apiKey;                  // 5. Explicit apiKey option (fallback)
 
   if (!apiKey) {
-    logger.warn(`[Gemini] No API key found. Run 'happy connect gemini' to authenticate via Google OAuth, or set ${GEMINI_API_KEY_ENV} environment variable.`);
+    logger.warn(`[Gemini] No API key found. Run '${BIN_NAME} connect gemini' to authenticate via Google OAuth, or set ${GEMINI_API_KEY_ENV} environment variable.`);
   }
 
   // Command to run gemini
