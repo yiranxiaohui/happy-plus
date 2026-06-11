@@ -1,6 +1,6 @@
 > ### 🔀 happy-plus fork
 > This is a self-hosted fork of [slopus/happy](https://github.com/slopus/happy) maintained by [@yiranxiaohui](https://github.com/yiranxiaohui).
-> Distinct from upstream: ships as **`happy-plus`** on npm (`npm i -g happy-plus`), defaults to Opus 4.8, bumps `claude-agent-sdk` to 0.3.x with Task* tools migrated, adds GHA pipelines for Android APK + GHCR server image + CLI tarball.
+> Distinct from upstream: ships as **`happy-plus`** on npm (`npm i -g happy-plus`); adds an interactive terminal (PTY) on app/web, agent image display, Claude Fable 5, a same-origin web+server Docker image, and GHA pipelines for Android APK + GHCR server image + CLI tarball. Self-hosted web: [happy.yunnet.top](https://happy.yunnet.top).
 > See [`.claude/CLAUDE.md`](.claude/CLAUDE.md) (gitignored, local notes) for the full fork commit list.
 >
 > Upstream README follows. Everything below is from slopus/happy unchanged.
@@ -25,7 +25,7 @@ Use Claude Code or Codex from anywhere with end-to-end encryption.
 
 <div align="center">
   
-[🌐 **Web App**](https://app.happy.engineering) • [🎥 **See a Demo**](https://youtu.be/GCS0OG9QMSE) • [📚 **Documentation**](https://happy.engineering/docs/) • [💬 **Discord**](https://discord.gg/fX9WBAhyfD)
+[🌐 **Web App**](https://happy.yunnet.top) • [🎥 **See a Demo**](https://youtu.be/GCS0OG9QMSE) • [📚 **Documentation**](https://happy.engineering/docs/) • [💬 **Discord**](https://discord.gg/fX9WBAhyfD)
 
 </div>
 
