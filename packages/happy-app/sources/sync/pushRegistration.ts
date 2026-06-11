@@ -53,6 +53,26 @@ function getExpoProjectId(): string | null {
     return Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId ?? null;
 }
 
+/**
+ * getExpoPushTokenAsync hangs forever (no throw) when the bundled
+ * google-services.json is a stub / FCM is unreachable. Race it against a
+ * timeout so UI callers never hang; callers treat null as "unavailable".
+ */
+const PUSH_TOKEN_TIMEOUT_MS = 8000;
+
+export async function getExpoPushTokenWithTimeout(projectId: string): Promise<string | null> {
+    try {
+        const result = await Promise.race([
+            Notifications.getExpoPushTokenAsync({ projectId }),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), PUSH_TOKEN_TIMEOUT_MS)),
+        ]);
+        return result?.data ?? null;
+    } catch (error) {
+        console.log('Failed to get Expo push token:', error);
+        return null;
+    }
+}
+
 export async function getPushPermissionInfo(): Promise<PushPermissionInfo> {
     if (Platform.OS === 'web') {
         return {
@@ -128,13 +148,8 @@ export async function getCurrentExpoPushToken(): Promise<string | null> {
         return loadRegisteredPushToken();
     }
 
-    try {
-        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-        return tokenData.data ?? loadRegisteredPushToken();
-    } catch (error) {
-        console.log('Failed to get Expo push token:', error);
-        return loadRegisteredPushToken();
-    }
+    const token = await getExpoPushTokenWithTimeout(projectId);
+    return token ?? loadRegisteredPushToken();
 }
 
 export async function syncCurrentPushToken(credentials: AuthCredentials): Promise<SyncCurrentPushTokenResult> {
@@ -179,8 +194,14 @@ export async function syncCurrentPushToken(credentials: AuthCredentials): Promis
         };
     }
 
-    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-    const currentToken = tokenData.data;
+    const currentToken = await getExpoPushTokenWithTimeout(projectId);
+    if (!currentToken) {
+        return {
+            registered: false,
+            token: loadRegisteredPushToken(),
+            permission,
+        };
+    }
     const previousToken = loadRegisteredPushToken();
 
     await registerPushToken(credentials, currentToken);

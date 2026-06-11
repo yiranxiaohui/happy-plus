@@ -102,11 +102,22 @@ jobs:
             echo "Ref '$REF' is not a release tag; using app.config.js fallback version"
           fi
 
+      - name: Inject google-services.json (fork push config)
+        if: ${{ env.APP_ENV == 'plus' }}
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > packages/happy-app/google-services.json
+            echo "Injected real google-services.json from secret"
+          else
+            echo "No GOOGLE_SERVICES_JSON secret; keeping bundled stub (push unavailable)"
+          fi
+
       - name: Expo prebuild (generate android/)
         working-directory: packages/happy-app
         env:
           APP_ENV: ${{ env.APP_ENV }}
           APP_VERSION: ${{ env.APP_VERSION }}
+          EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
         run: pnpm exec expo prebuild --platform android --no-install --clean
 
       - name: Cache Gradle

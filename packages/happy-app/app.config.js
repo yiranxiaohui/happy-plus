@@ -244,7 +244,10 @@ export default {
                 root: "./sources/app"
             },
             eas: {
-                projectId: "4558dd3d-cd5a-47cd-bad9-e591a241cc06"
+                // Upstream's project by default; the fork sets EAS_PROJECT_ID
+                // (its own expo.dev project) so push tokens are minted against
+                // the fork's FCM credentials. See docs/fork-push-setup.md.
+                projectId: process.env.EAS_PROJECT_ID || "4558dd3d-cd5a-47cd-bad9-e591a241cc06"
             },
             app: {
                 postHogKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,

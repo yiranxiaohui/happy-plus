@@ -135,14 +135,21 @@ export default React.memo(() => {
 
         setLoadingPushSettings(true);
         try {
-            const [tokens, permission, liveToken] = await Promise.all([
+            const [tokensResult, permissionResult, liveTokenResult] = await Promise.allSettled([
                 fetchPushTokens(auth.credentials),
                 getPushPermissionInfo(),
                 getCurrentExpoPushToken(),
             ]);
-            setPushTokens(tokens);
-            setPushPermission(permission);
-            setCurrentPushToken(liveToken);
+            if (tokensResult.status === 'fulfilled') setPushTokens(tokensResult.value);
+            if (permissionResult.status === 'fulfilled') setPushPermission(permissionResult.value);
+            if (liveTokenResult.status === 'fulfilled') setCurrentPushToken(liveTokenResult.value);
+            const firstError = [tokensResult, permissionResult, liveTokenResult].find(r => r.status === 'rejected');
+            if (firstError && firstError.status === 'rejected') {
+                console.error('Failed to load push notification settings:', firstError.reason);
+                if (showError) {
+                    Modal.alert(t('common.error'), 'Failed to load push notification settings.');
+                }
+            }
         } catch (error) {
             console.error('Failed to load push notification settings:', error);
             if (showError) {
