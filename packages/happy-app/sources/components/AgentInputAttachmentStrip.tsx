@@ -4,7 +4,7 @@
  * Uses thumbhash as a blurry placeholder while the full image loads.
  */
 import * as React from 'react';
-import { ScrollView, View, Pressable } from 'react-native';
+import { ScrollView, View, Pressable, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -33,12 +33,21 @@ export function AgentInputAttachmentStrip({ images, onRemove }: AgentInputAttach
             keyboardShouldPersistTaps="always"
         >
             {images.map((img) => (
-                <AttachmentThumbnail
-                    key={img.id}
-                    image={img}
-                    onRemove={onRemove}
-                    theme={theme}
-                />
+                img.kind === 'file' ? (
+                    <AttachmentFileChip
+                        key={img.id}
+                        file={img}
+                        onRemove={onRemove}
+                        theme={theme}
+                    />
+                ) : (
+                    <AttachmentThumbnail
+                        key={img.id}
+                        image={img}
+                        onRemove={onRemove}
+                        theme={theme}
+                    />
+                )
             ))}
         </ScrollView>
     );
@@ -87,6 +96,35 @@ function AttachmentThumbnail({
     );
 }
 
+function AttachmentFileChip({
+    file,
+    onRemove,
+    theme,
+}: {
+    file: AttachmentPreview;
+    onRemove: (id: string) => void;
+    theme: any;
+}) {
+    return (
+        <View style={[styles.chipContainer, { borderColor: theme.colors.divider, backgroundColor: theme.colors.surfaceHigh }]}>
+            <Ionicons name="document-outline" size={20} color={theme.colors.text} />
+            <Text numberOfLines={1} style={[styles.chipName, { color: theme.colors.text }]}>
+                {file.name}
+            </Text>
+            <Pressable
+                onPress={() => onRemove(file.id)}
+                hitSlop={4}
+                style={(p) => [
+                    styles.removeButton,
+                    { backgroundColor: theme.colors.surfaceHigh, opacity: p.pressed ? 0.7 : 1 },
+                ]}
+            >
+                <Ionicons name="close" size={10} color={theme.colors.text} />
+            </Pressable>
+        </View>
+    );
+}
+
 const styles = StyleSheet.create(() => ({
     strip: {
         marginBottom: 8,
@@ -107,6 +145,21 @@ const styles = StyleSheet.create(() => ({
     },
     thumb: {
         borderRadius: BORDER_RADIUS,
+    },
+    chipContainer: {
+        height: THUMB_SIZE,
+        maxWidth: 180,
+        borderRadius: BORDER_RADIUS,
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 10,
+        position: 'relative',
+    },
+    chipName: {
+        fontSize: 13,
+        flexShrink: 1,
     },
     removeButton: {
         position: 'absolute',

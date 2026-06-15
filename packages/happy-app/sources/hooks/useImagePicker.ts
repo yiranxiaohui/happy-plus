@@ -18,7 +18,7 @@ import { t } from '@/text';
 import type { AttachmentPreview } from '@/sync/attachmentTypes';
 
 export const MAX_IMAGES_PER_MESSAGE = 20;
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 export type { AttachmentPreview };
 
@@ -87,7 +87,7 @@ export function useImagePicker(): UseImagePickerResult {
             if (size > MAX_FILE_SIZE) {
                 Modal.alert(
                     t('imageUpload.fileTooLargeTitle'),
-                    t('imageUpload.fileTooLargeMessage', { name: asset.fileName ?? 'image', maxMb: 10 }),
+                    t('imageUpload.fileTooLargeMessage', { name: asset.fileName ?? 'image', maxMb: 50 }),
                     [{ text: t('common.ok') }],
                 );
                 continue;
@@ -100,6 +100,7 @@ export function useImagePicker(): UseImagePickerResult {
 
             previews.push({
                 id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                kind: 'image',
                 uri: asset.uri,
                 width: asset.width,
                 height: asset.height,

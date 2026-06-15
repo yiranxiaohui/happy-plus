@@ -17,6 +17,8 @@ import { getToolName } from "./utils/getToolName";
 import { getAskUserQuestionToolCallIds } from "./utils/questionNotification";
 import { cleanupStdinAfterInk } from "@/utils/terminalStdinCleanup";
 import type { MessageParam, ContentBlockParam } from '@anthropic-ai/sdk/resources';
+import { randomUUID } from 'crypto';
+import { materializeAttachment, ensureHappyExcluded } from './utils/materializeAttachment';
 
 interface PermissionsField {
     date: number;
@@ -347,30 +349,41 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
                             const attachments = msg.attachments ?? [];
                             if (attachments.length > 0) {
                                 const contentBlocks: ContentBlockParam[] = [];
+                                const filePaths: string[] = [];
                                 for (const att of attachments) {
-                                    // Detect media type from the decrypted bytes' magic header
-                                    // rather than trusting the wire-supplied mimeType. iOS image
-                                    // pickers happily report things like "image/heic" or no
-                                    // mimeType at all, which the Anthropic API rejects with a
-                                    // strict enum validation error. If the bytes look like one
-                                    // of the four formats Claude accepts, send that label —
-                                    // otherwise skip the attachment with a debug log.
+                                    // Images Claude can view go inline as image blocks.
                                     const detected = detectClaudeImageMime(att.data);
-                                    if (!detected) {
-                                        logger.debug(`[remote] Skipping unsupported attachment (no magic-byte match): ${att.name}, claimed mimeType=${att.mimeType}`);
+                                    if (detected) {
+                                        contentBlocks.push({
+                                            type: 'image' as const,
+                                            source: {
+                                                type: 'base64' as const,
+                                                media_type: detected,
+                                                data: Buffer.from(att.data).toString('base64'),
+                                            },
+                                        });
                                         continue;
                                     }
-                                    contentBlocks.push({
-                                        type: 'image' as const,
-                                        source: {
-                                            type: 'base64' as const,
-                                            media_type: detected,
-                                            data: Buffer.from(att.data).toString('base64'),
-                                        },
-                                    });
+                                    // Everything else is written to disk and referenced by path.
+                                    try {
+                                        await ensureHappyExcluded(session.path);
+                                        const rel = await materializeAttachment(
+                                            session.path,
+                                            att.name,
+                                            att.data,
+                                            randomUUID().slice(0, 8),
+                                        );
+                                        filePaths.push(rel);
+                                        logger.debug(`[remote] Materialized attachment to ${rel}`);
+                                    } catch (err) {
+                                        logger.debug(`[remote] Failed to materialize attachment ${att.name}`, { err });
+                                    }
                                 }
-                                contentBlocks.push({ type: 'text' as const, text: msg.message });
-                                logger.debug(`[remote] Combined ${contentBlocks.length - 1} image(s) with text message`);
+                                const note = filePaths.length > 0
+                                    ? `[Attached files: ${filePaths.join(', ')}]\n\n`
+                                    : '';
+                                contentBlocks.push({ type: 'text' as const, text: note + msg.message });
+                                logger.debug(`[remote] ${contentBlocks.length - 1} inline block(s), ${filePaths.length} file(s) on disk`);
                                 return {
                                     message: contentBlocks,
                                     mode: msg.mode,

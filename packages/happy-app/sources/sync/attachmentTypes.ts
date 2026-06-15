@@ -7,6 +7,8 @@
 export type AttachmentPreview = {
     /** Stable unique identifier for use as React key and for removal. */
     id: string;
+    /** 'image' renders as a thumbnail and inlines to Claude; 'file' renders as a chip and is materialized to disk by the CLI. Absent = 'image' for backward compat. */
+    kind?: 'image' | 'file';
     uri: string;
     width: number;
     height: number;
