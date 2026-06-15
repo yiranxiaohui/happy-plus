@@ -114,7 +114,7 @@ export function attachmentRoutes(app: Fastify) {
         }
 
         if (size > MAX_FILE_SIZE) {
-            return reply.code(413).send({ error: 'File too large (max 10MB)' });
+            return reply.code(413).send({ error: 'File too large (max 55MB)' });
         }
 
         // Always .enc — encrypted opaque blobs, never trust client filename for path.
@@ -189,7 +189,7 @@ export function attachmentRoutes(app: Fastify) {
 
         const body = request.body as Buffer;
         if (body.length > MAX_FILE_SIZE) {
-            return reply.code(413).send({ error: 'File too large (max 10MB)' });
+            return reply.code(413).send({ error: 'File too large (max 55MB)' });
         }
 
         const ref = `sessions/${sessionId}/attachments/${attachmentFile}`;
