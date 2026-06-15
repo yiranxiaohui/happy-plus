@@ -89,6 +89,8 @@ interface AgentInputProps {
     /** Image attachments waiting to be sent (expImageUpload feature). */
     selectedImages?: AttachmentPreview[];
     onPickImages?: () => void;
+    /** Open the any-file document picker (expImageUpload feature). */
+    onPickFiles?: () => void;
     onRemoveImage?: (id: string) => void;
     onAddImages?: (images: AttachmentPreview[]) => void;
 }
@@ -1348,6 +1350,30 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                             color={(props.selectedImages?.length ?? 0) > 0
                                                 ? theme.colors.radio.active
                                                 : theme.colors.button.secondary.tint}
+                                        />
+                                    </Pressable>
+                                )}
+
+                                {/* Document picker button (expImageUpload) */}
+                                {props.onPickFiles && (
+                                    <Pressable
+                                        onPress={props.onPickFiles}
+                                        hitSlop={{ top: 5, bottom: 10, left: 0, right: 0 }}
+                                        style={(p) => ({
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            borderRadius: Platform.select({ default: 16, android: 20 }),
+                                            paddingHorizontal: 8,
+                                            paddingVertical: 6,
+                                            justifyContent: 'center',
+                                            height: 32,
+                                            opacity: p.pressed ? 0.7 : 1,
+                                        })}
+                                    >
+                                        <Ionicons
+                                            name="attach-outline"
+                                            size={16}
+                                            color={theme.colors.button.secondary.tint}
                                         />
                                     </Pressable>
                                 )}
