@@ -16,7 +16,7 @@ import { Fastify } from '../types';
 import { db } from '@/storage/db';
 import { s3client, s3bucket, isLocalStorage, getLocalFilesDir, putLocalFile } from '@/storage/files';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 55 * 1024 * 1024; // 55MB (50MB raw + encryption overhead headroom)
 const PRESIGNED_TTL_SECONDS = 15 * 60; // 15 minutes (design spec)
 
 // Per-user, per-process token bucket for request-upload. Best-effort flood
