@@ -18,6 +18,10 @@ describe('sanitizeAttachmentName', () => {
         expect(sanitizeAttachmentName('..')).toBe('file');
         expect(sanitizeAttachmentName('/')).toBe('file');
     });
+    it('strips CR/LF to keep the attached-files note single-line', () => {
+        expect(sanitizeAttachmentName('foo\nbar.txt')).toBe('foo bar.txt');
+        expect(sanitizeAttachmentName('a\r\nb.bin')).toBe('a b.bin');
+    });
 });
 
 describe('materializeAttachment', () => {

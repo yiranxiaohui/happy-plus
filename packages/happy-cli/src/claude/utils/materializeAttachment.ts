@@ -9,9 +9,10 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { logger } from '@/ui/logger';
 
-/** Strip any directory components and reject traversal; basename only. */
+/** Strip directory components (prevent escape from .happy/uploads/) and any
+ *  CR/LF (keep the [Attached files: ...] note single-line). */
 export function sanitizeAttachmentName(name: string): string {
-    const base = path.basename(name.replace(/\\/g, '/'));
+    const base = path.basename(name.replace(/\\/g, '/')).replace(/[\r\n]+/g, ' ').trim();
     if (!base || base === '.' || base === '..') return 'file';
     return base;
 }
