@@ -173,11 +173,11 @@ const standaloneEntrypoints = new Set([
 ]);
 
 export function isStandaloneEntrypoint(invokedFile: string): boolean {
-    // Normalize Windows separators first: on POSIX, path.basename treats
-    // backslashes as ordinary characters, so a Windows-style argv[1] would
-    // never match (upstream's own cross-platform test fails on Linux).
-    const normalized = invokedFile.replace(/\\/g, '/');
-    return standaloneEntrypoints.has(path.posix.basename(normalized).toLowerCase());
+    // win32.basename splits on both "/" and "\", so a Windows-style argv[1] is
+    // parsed correctly even on a POSIX host (and vice-versa). The POSIX basename
+    // would leave backslashes intact and miss Windows entrypoints like
+    // happy-server.exe when tests or tooling run cross-platform.
+    return standaloneEntrypoints.has(path.win32.basename(invokedFile).toLowerCase());
 }
 
 const invokedFile = process.argv[1] || "";
