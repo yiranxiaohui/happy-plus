@@ -15,7 +15,7 @@ interface PermissionResponse {
     id: string;
     approved: boolean;
     reason?: string;
-    mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+    mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk' | 'auto';
     allowTools?: string[];
     updatedInput?: Record<string, unknown>;
     receivedAt?: number;
@@ -168,6 +168,13 @@ export class PermissionHandler {
         //
         // Handle special cases
         //
+
+        // dontAsk: never prompt. Anything not already pre-approved by Happy's
+        // allowlist (checked above) is denied. Mirrors the SDK's 'dontAsk'
+        // semantics — don't prompt, deny if not pre-approved.
+        if (this.permissionMode === 'dontAsk') {
+            return { behavior: 'deny', message: 'Permission denied: tool is not pre-approved and dontAsk mode does not prompt.' };
+        }
 
         if (this.permissionMode === 'bypassPermissions') {
             return { behavior: 'allow', updatedInput: input as Record<string, unknown> };

@@ -23,7 +23,7 @@ import { materializeAttachment, ensureHappyExcluded } from './utils/materializeA
 interface PermissionsField {
     date: number;
     result: 'approved' | 'denied';
-    mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+    mode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk' | 'auto';
     allowedTools?: string[];
 }
 
