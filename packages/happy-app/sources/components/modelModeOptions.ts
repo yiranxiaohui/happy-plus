@@ -77,10 +77,11 @@ export function getGeminiPermissionModes(translate: Translate): PermissionMode[]
 
 export function getClaudeModelModes(): ModelMode[] {
     return [
-        { key: 'default', name: 'default model', description: null },
-        { key: 'fable', name: 'fable 5', description: 'newest & most capable' },
-        { key: 'sonnet', name: 'sonnet 4.6', description: null },
-        { key: 'haiku', name: 'haiku 4.5', description: null },
+        { key: 'default', name: 'Default', description: 'Opus 4.8 with 1M context · Best for everyday, complex tasks' },
+        { key: 'opus', name: 'Opus', description: 'Opus 4.8 with 1M context · Best for everyday, complex tasks' },
+        { key: 'fable', name: 'Fable', description: 'Fable 5 · Most capable for your hardest and longest-running tasks' },
+        { key: 'sonnet', name: 'Sonnet', description: 'Sonnet 5 · Efficient for routine tasks' },
+        { key: 'haiku', name: 'Haiku', description: 'Haiku 4.5 · Fastest for quick answers' },
     ];
 }
 
