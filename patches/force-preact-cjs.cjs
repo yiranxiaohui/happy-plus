@@ -11,6 +11,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Write via unlink-first: bun (like pnpm) links node_modules files from its
+// global cache; writing in place would corrupt the shared cache copy.
+function writePatched(file, content) {
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    fs.writeFileSync(file, content, 'utf8');
+}
+
+
 const pkgPath = path.resolve(__dirname, '..', 'node_modules', 'preact', 'package.json');
 if (!fs.existsSync(pkgPath)) {
     console.warn('[force-preact-cjs] preact package.json not found at', pkgPath, '— skipping (not needed for web builds)');
@@ -37,5 +45,5 @@ if (pkg.exports) rewriteExports(pkg.exports);
 // "main"/"require" condition, leading back to the ESM bundle.
 if (pkg.module) delete pkg.module;
 
-fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+writePatched(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
 console.log('[force-preact-cjs] patched preact package.json — all subpaths point to CJS');

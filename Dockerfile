@@ -2,24 +2,28 @@
 # Uses PGlite (embedded Postgres), local filesystem storage, no Redis
 
 # Stage 1: install dependencies
-FROM node:20 AS deps
+FROM node:24 AS deps
 
 RUN apt-get update && apt-get install -y python3 make g++ build-essential && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
+RUN npm install -g bun@1.3.14
 
 WORKDIR /repo
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json bun.lock bunfig.toml ./
 COPY scripts ./scripts
 COPY patches ./patches
 
-RUN mkdir -p packages/happy-app packages/happy-server packages/happy-cli packages/happy-agent packages/happy-wire
+# bun's workspaces list is explicit paths — every workspace package.json must
+# exist or install fails to resolve the workspace graph.
+RUN mkdir -p packages/happy-app packages/happy-server packages/happy-cli packages/happy-agent packages/happy-wire packages/happy-app-logs packages/codium
 
 COPY packages/happy-app/package.json packages/happy-app/
 COPY packages/happy-server/package.json packages/happy-server/
 COPY packages/happy-cli/package.json packages/happy-cli/
 COPY packages/happy-agent/package.json packages/happy-agent/
 COPY packages/happy-wire/package.json packages/happy-wire/
+COPY packages/happy-app-logs/package.json packages/happy-app-logs/
+COPY packages/codium/package.json packages/codium/
 
 # Workspace postinstall requirements
 COPY packages/happy-app/patches packages/happy-app/patches
@@ -27,7 +31,7 @@ COPY packages/happy-server/prisma packages/happy-server/prisma
 COPY packages/happy-cli/scripts packages/happy-cli/scripts
 COPY packages/happy-cli/tools packages/happy-cli/tools
 
-RUN SKIP_HAPPY_WIRE_BUILD=1 pnpm install --frozen-lockfile
+RUN SKIP_HAPPY_WIRE_BUILD=1 bun install --frozen-lockfile
 
 # Stage 2: copy source and type-check
 FROM deps AS builder
@@ -35,8 +39,8 @@ FROM deps AS builder
 COPY packages/happy-wire ./packages/happy-wire
 COPY packages/happy-server ./packages/happy-server
 
-RUN pnpm --filter @slopus/happy-wire build
-RUN pnpm --filter happy-server build
+RUN bun run --filter @slopus/happy-wire build
+RUN bun run --filter happy-server build
 
 # Stage 3: runtime
 FROM node:20-slim AS runner

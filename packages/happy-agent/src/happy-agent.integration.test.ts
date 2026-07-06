@@ -35,7 +35,7 @@ let testWorktreeDir: string | null = null;
 const spawnedSessionIds = new Set<string>();
 
 function runPnpm(args: string[], cwd = repoRoot): string {
-    return runCommand('pnpm', args, cwd, process.env);
+    return runCommand('bun', ['run', ...args], cwd, process.env);
 }
 
 function runCommand(command: string, args: string[], cwd = repoRoot, env: NodeJS.ProcessEnv = process.env): string {

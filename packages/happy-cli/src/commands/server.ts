@@ -100,7 +100,7 @@ export async function handleServerCommand(args: string[]): Promise<void> {
     if (staticDir) {
         console.log(chalk.gray(`  webapp:     ${staticDir}`));
     } else {
-        console.log(chalk.yellow('  webapp:     (no build) — API only. Run `pnpm bundle:webapp` to build.'));
+        console.log(chalk.yellow('  webapp:     (no build) — API only. Run `bun run bundle:webapp` to build.'));
     }
     console.log();
 

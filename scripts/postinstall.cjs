@@ -12,6 +12,6 @@ if (process.env.SKIP_HAPPY_WIRE_BUILD === '1') {
   process.exit(0);
 }
 
-execSync('pnpm --filter @slopus/happy-wire build', {
+execSync('bun run --filter @slopus/happy-wire build', {
   stdio: 'inherit',
 });

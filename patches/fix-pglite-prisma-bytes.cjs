@@ -12,6 +12,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Write via unlink-first: bun (like pnpm) links node_modules files from its
+// global cache; writing in place would corrupt the shared cache copy.
+function writePatched(file, content) {
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    fs.writeFileSync(file, content, 'utf8');
+}
+
+
 const files = [
     'node_modules/pglite-prisma-adapter/dist/index.mjs',
     'node_modules/pglite-prisma-adapter/dist/index.cjs',
@@ -35,7 +43,7 @@ for (const file of files) {
     );
 
     if (content !== original) {
-        fs.writeFileSync(filePath, content, 'utf8');
+        writePatched(filePath, content, 'utf8');
         patched++;
     }
 }

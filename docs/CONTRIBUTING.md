@@ -48,7 +48,7 @@ Every issue should start with a **one-paragraph summary** of the problem. Don't 
 ### Prerequisites
 
 - Node.js >= 20
-- pnpm (`npm install -g pnpm`)
+- bun (`npm install -g bun` 或 curl -fsSL https://bun.sh/install | bash)
 - Git
 
 ### Getting Started
@@ -56,17 +56,17 @@ Every issue should start with a **one-paragraph summary** of the problem. Don't 
 ```bash
 git clone https://github.com/slopus/happy.git
 cd happy
-pnpm install
+bun install
 ```
 
 ### Happy App (Mobile + Web)
 
 ```bash
-pnpm --filter happy-app start          # Expo dev server
-pnpm --filter happy-app ios:dev        # iOS simulator
-pnpm --filter happy-app android:dev    # Android emulator
-pnpm web                                # Browser (shortcut)
-pnpm --filter happy-app typecheck      # Run after all changes
+bun run --filter happy-app start          # Expo dev server
+bun run --filter happy-app ios:dev        # iOS simulator
+bun run --filter happy-app android:dev    # Android emulator
+bun run web                                # Browser (shortcut)
+bun run --filter happy-app typecheck      # Run after all changes
 ```
 
 The app has three build variants — all can be installed simultaneously on the same device:
@@ -82,16 +82,16 @@ Swap `ios:dev` for `ios:preview` or `ios:production` (same for `android:`).
 #### macOS Desktop (Tauri)
 
 ```bash
-pnpm --filter happy-app tauri:dev      # Run with hot reload
-pnpm --filter happy-app tauri:build:dev
+bun run --filter happy-app tauri:dev      # Run with hot reload
+bun run --filter happy-app tauri:build:dev
 ```
 
 ### Happy CLI
 
 ```bash
-pnpm --filter happy build
-pnpm --filter happy test
-pnpm --filter happy cli:install   # Build + link this workspace as the global `happy` + restart daemon
+bun run --filter happy build
+bun run --filter happy test
+bun run --filter happy cli:install   # Build + link this workspace as the global `happy` + restart daemon
 ```
 
 `cli:install` replaces the `happy` binary installed from npm with a symlink to this workspace.
@@ -106,13 +106,13 @@ To sandbox dev data, set `HAPPY_HOME_DIR=~/.happy-dev` in your shell before runn
 ### Happy Server
 
 ```bash
-pnpm --filter happy-server standalone:dev   # Local server (no Docker needed)
+bun run --filter happy-server standalone:dev   # Local server (no Docker needed)
 ```
 
 Runs on `localhost:3005` with embedded PGlite. To point the app at your local server:
 
 ```bash
-EXPO_PUBLIC_HAPPY_SERVER_URL=http://localhost:3005 pnpm --filter happy-app start
+EXPO_PUBLIC_HAPPY_SERVER_URL=http://localhost:3005 bun run --filter happy-app start
 ```
 
 ## Project Structure

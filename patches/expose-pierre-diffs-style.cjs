@@ -10,6 +10,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Write via unlink-first: bun (like pnpm) links node_modules files from its
+// global cache; writing in place would corrupt the shared cache copy.
+function writePatched(file, content) {
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    fs.writeFileSync(file, content, 'utf8');
+}
+
+
 const pkgDirs = [
     path.resolve(__dirname, '..', 'node_modules/@pierre/diffs'),
     path.resolve(__dirname, '..', 'packages/happy-app/node_modules/@pierre/diffs'),
@@ -29,12 +37,12 @@ for (const pkgDir of pkgDirs) {
             types: './dist/style.d.ts',
             import: './dist/style.js',
         };
-        fs.writeFileSync(pkgJsonPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+        writePatched(pkgJsonPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
         patched++;
     }
 
     if (fs.existsSync(path.dirname(styleDtsPath)) && !fs.existsSync(styleDtsPath)) {
-        fs.writeFileSync(
+        writePatched(
             styleDtsPath,
             'declare const style_default: string;\nexport default style_default;\n',
             'utf8'

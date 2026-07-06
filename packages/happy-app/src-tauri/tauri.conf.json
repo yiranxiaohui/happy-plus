@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:8081",
-    "beforeDevCommand": "pnpm start",
-    "beforeBuildCommand": "pnpm exec expo export --platform web --output-dir dist"
+    "beforeDevCommand": "bun run start",
+    "beforeBuildCommand": "bun x expo export --platform web --output-dir dist"
   },
   "app": {
     "windows": [

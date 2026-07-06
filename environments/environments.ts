@@ -330,8 +330,8 @@ export async function createEnvironment(opts?: { noSwitch?: boolean }): Promise<
     const envShRelative = path.relative(process.cwd(), path.join(envDir, "env.sh"));
     console.log("Start in separate terminals:");
     console.log("");
-    console.log(`  Server:  pnpm env:server`);
-    console.log(`  Webapp:  pnpm env:web`);
+    console.log(`  Server:  bun run env:server`);
+    console.log(`  Webapp:  bun run env:web`);
     console.log("");
     console.log("CLI (from any terminal, anywhere):");
     console.log("");
@@ -353,7 +353,7 @@ export async function startEnvironmentServices(name: string): Promise<void> {
 
     const serverLogFile = path.join(envDir, "server", "stdout.log");
     console.log(`Starting server on port ${config.serverPort}...`);
-    const serverPid = spawnService("pnpm", ["standalone", "serve"], {
+    const serverPid = spawnService("bun", ["run", "standalone", "serve"], {
         cwd: path.join(REPO_ROOT, "packages", "happy-server"),
         env: mergedEnv,
         logFile: serverLogFile,
@@ -374,7 +374,7 @@ export async function startEnvironmentServices(name: string): Promise<void> {
     const webLogFile = path.join(envDir, "web", "stdout.log");
     fs.mkdirSync(path.join(envDir, "web"), { recursive: true });
     console.log(`Starting web on port ${config.expoPort}...`);
-    const webPid = spawnService("pnpm", ["web", "--port", String(config.expoPort)], {
+    const webPid = spawnService("bun", ["run", "web", "--port", String(config.expoPort)], {
         cwd: path.join(REPO_ROOT, "packages", "happy-app"),
         env: { ...mergedEnv, BROWSER: "none" },
         logFile: webLogFile,
@@ -398,7 +398,7 @@ export async function seedEnvironment(name: string): Promise<void> {
         const res = await fetch(`${serverUrl}/`);
         if (!res.ok) throw new Error(`Status ${res.status}`);
     } catch {
-        throw new Error(`Server not reachable at ${serverUrl}. Start it first: pnpm env:server`);
+        throw new Error(`Server not reachable at ${serverUrl}. Start it first: bun run env:server`);
     }
 
     const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
@@ -549,7 +549,7 @@ async function commandNew(opts?: { noSwitch?: boolean }): Promise<string> {
 function commandList() {
     const envs = listEnvironments();
     if (envs.length === 0) {
-        console.log("No environments. Run `pnpm env:new` to create one.");
+        console.log("No environments. Run `bun run env:new` to create one.");
         return;
     }
 
@@ -614,12 +614,12 @@ function commandRemove(name: string) {
 function commandCurrent() {
     const currentConfig = readCurrentConfig();
     if (!currentConfig?.current) {
-        console.error("No current environment. Run `pnpm env:new` or `pnpm env:use <name>`.");
+        console.error("No current environment. Run `bun run env:new` or `bun run env:use <name>`.");
         process.exit(1);
     }
     const envShPath = path.join(ENVIRONMENTS_DIR, currentConfig.current, "env.sh");
     if (!fs.existsSync(envShPath)) {
-        console.error(`Current environment "${currentConfig.current}" is missing. Run \`pnpm env:new\`.`);
+        console.error(`Current environment "${currentConfig.current}" is missing. Run \`bun run env:new\`.`);
         process.exit(1);
     }
     console.log(envShPath);
@@ -634,7 +634,7 @@ function commandCurrent() {
 function commandRun(service: string, serviceArgs: string[] = []) {
     const currentConfig = readCurrentConfig();
     if (!currentConfig?.current) {
-        console.error("No current environment. Run `pnpm env:new` first.");
+        console.error("No current environment. Run `bun run env:new` first.");
         process.exit(1);
     }
 
@@ -643,7 +643,7 @@ function commandRun(service: string, serviceArgs: string[] = []) {
     const envJsonPath = path.join(envDir, "environment.json");
 
     if (!fs.existsSync(envJsonPath)) {
-        console.error(`Environment "${envName}" not found. Run \`pnpm env:new\`.`);
+        console.error(`Environment "${envName}" not found. Run \`bun run env:new\`.`);
         process.exit(1);
     }
 
@@ -655,8 +655,8 @@ function commandRun(service: string, serviceArgs: string[] = []) {
         case "server": {
             console.log(`Starting server for environment "${envName}" on port ${config.serverPort}...`);
             const result = spawnSync(
-                "pnpm",
-                ["standalone", "serve"],
+                "bun",
+                ["run", "standalone", "serve"],
                 {
                     cwd: path.join(REPO_ROOT, "packages", "happy-server"),
                     env: mergedEnv,
@@ -669,8 +669,8 @@ function commandRun(service: string, serviceArgs: string[] = []) {
         case "web": {
             console.log(`Starting web app for environment "${envName}" on port ${config.expoPort}...`);
             const result = spawnSync(
-                "pnpm",
-                ["web", "--port", String(config.expoPort)],
+                "bun",
+                ["run", "web", "--port", String(config.expoPort)],
                 {
                     cwd: path.join(REPO_ROOT, "packages", "happy-app"),
                     // Expo treats `--web` as "open in browser". Disable that for env-managed runs.
@@ -684,8 +684,8 @@ function commandRun(service: string, serviceArgs: string[] = []) {
         case "ios": {
             console.log(`Starting iOS app for environment "${envName}"...`);
             const result = spawnSync(
-                "pnpm",
-                ["ios"],
+                "bun",
+                ["run", "ios"],
                 {
                     cwd: path.join(REPO_ROOT, "packages", "happy-app"),
                     env: mergedEnv,
@@ -698,8 +698,8 @@ function commandRun(service: string, serviceArgs: string[] = []) {
         case "android": {
             console.log(`Starting Android app for environment "${envName}"...`);
             const result = spawnSync(
-                "pnpm",
-                ["android"],
+                "bun",
+                ["run", "android"],
                 {
                     cwd: path.join(REPO_ROOT, "packages", "happy-app"),
                     env: mergedEnv,
@@ -861,7 +861,7 @@ function buildCliCommand(envDir: string): string {
 async function commandSeed(targetName?: string) {
     const envName = targetName ?? readCurrentConfig()?.current;
     if (!envName) {
-        console.error("No current environment. Run `pnpm env:new` first.");
+        console.error("No current environment. Run `bun run env:new` first.");
         process.exit(1);
     }
     await seedEnvironment(envName);
@@ -885,7 +885,7 @@ async function commandUp(template: Template, opts?: { noSwitch?: boolean }) {
         console.log("Building CLI (needed for daemon)...");
         const envVars = buildEnvVars(envDir, config.serverPort, config.expoPort);
         const mergedEnv: Record<string, string | undefined> = { ...process.env, ...envVars };
-        const buildResult = spawnSync("pnpm", ["build"], {
+        const buildResult = spawnSync("bun", ["run", "build"], {
             cwd: path.join(REPO_ROOT, "packages", "happy-cli"),
             env: mergedEnv,
             stdio: "inherit",
@@ -916,7 +916,7 @@ async function commandUp(template: Template, opts?: { noSwitch?: boolean }) {
 
     console.log(`  Logs:   ${path.relative(process.cwd(), path.join(envDir, "server", "stdout.log"))}`);
     console.log(`          ${path.relative(process.cwd(), path.join(envDir, "web", "stdout.log"))}`);
-    console.log(`  Stop:   pnpm env:down`);
+    console.log(`  Stop:   bun run env:down`);
     console.log("");
 }
 
@@ -936,7 +936,7 @@ function commandDown(targetName?: string) {
 function commandTailscale() {
     const currentConfig = readCurrentConfig();
     if (!currentConfig?.current) {
-        console.error("No current environment. Run `pnpm env:new` first.");
+        console.error("No current environment. Run `bun run env:new` first.");
         process.exit(1);
     }
 
@@ -991,14 +991,14 @@ async function main(): Promise<void> {
             break;
         case "use":
             if (!args[0]) {
-                console.error("Usage: pnpm env:use <name>");
+                console.error("Usage: bun run env:use <name>");
                 process.exit(1);
             }
             commandUse(args[0]);
             break;
         case "remove":
             if (!args[0]) {
-                console.error("Usage: pnpm env:remove <name>");
+                console.error("Usage: bun run env:remove <name>");
                 process.exit(1);
             }
             commandRemove(args[0]);
@@ -1008,7 +1008,7 @@ async function main(): Promise<void> {
             break;
         case "run":
             if (!args[0]) {
-                console.error("Usage: pnpm env:server | pnpm env:web | pnpm env:cli");
+                console.error("Usage: bun run env:server | bun run env:web | bun run env:cli");
                 process.exit(1);
             }
             commandRun(args[0], args.slice(1));
@@ -1020,7 +1020,7 @@ async function main(): Promise<void> {
             const templateIdx = args.indexOf("--template");
             const template = templateIdx !== -1 ? args[templateIdx + 1] : undefined;
             if (!template || !VALID_TEMPLATES.includes(template as Template)) {
-                console.error(`Usage: pnpm env:up --template <${VALID_TEMPLATES.join("|")}>`);
+                console.error(`Usage: bun run env:up --template <${VALID_TEMPLATES.join("|")}>`);
                 process.exit(1);
             }
             const noSwitch = args.includes("--no-switch");
@@ -1037,24 +1037,24 @@ async function main(): Promise<void> {
             console.log(`Happy Environment Manager
 
 Usage:
-  pnpm env:up --template <t>  Create + start everything (templates: ${VALID_TEMPLATES.join(", ")})
-  pnpm env:up:authenticated   Create + start everything with the authenticated template
-  pnpm env:down               Stop all services for current environment
+  bun run env:up --template <t>  Create + start everything (templates: ${VALID_TEMPLATES.join(", ")})
+  bun run env:up:authenticated   Create + start everything with the authenticated template
+  bun run env:down               Stop all services for current environment
 
-  pnpm env:new              Create a new isolated dev environment
-  pnpm env:list             List all environments with status
-  pnpm env:use <name>       Switch to a different environment
-  pnpm env:remove <name>    Delete an environment
-  pnpm env:current          Print current environment's env.sh path
-  pnpm env:seed             Seed auth for CLI + web (requires server running)
+  bun run env:new              Create a new isolated dev environment
+  bun run env:list             List all environments with status
+  bun run env:use <name>       Switch to a different environment
+  bun run env:remove <name>    Delete an environment
+  bun run env:current          Print current environment's env.sh path
+  bun run env:seed             Seed auth for CLI + web (requires server running)
 
-  pnpm env:server           Start the server (current environment)
-  pnpm env:web              Start the web app (current environment)
-  pnpm env:ios              Start the iOS app (current environment)
-  pnpm env:android          Start the Android app (current environment)
-  pnpm env:cli              Start the CLI (current environment)
+  bun run env:server           Start the server (current environment)
+  bun run env:web              Start the web app (current environment)
+  bun run env:ios              Start the iOS app (current environment)
+  bun run env:android          Start the Android app (current environment)
+  bun run env:cli              Start the CLI (current environment)
 
-  pnpm env:tailscale        Expose server + web via Tailscale funnel
+  bun run env:tailscale        Expose server + web via Tailscale funnel
 `);
             if (subcommand && subcommand !== "--help" && subcommand !== "-h") {
                 process.exit(1);
