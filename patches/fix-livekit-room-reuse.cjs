@@ -13,6 +13,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Write via unlink-first: bun (like pnpm) links node_modules files from its
+// global cache; writing in place would corrupt the shared cache copy.
+function writePatched(file, content) {
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    fs.writeFileSync(file, content, 'utf8');
+}
+
+
 let patched = 0;
 
 const nodeModulesRoots = [
@@ -36,7 +44,7 @@ for (const nodeModulesRoot of nodeModulesRoots) {
             'O(r ?? new U(t));\n  }, [r, JSON.stringify(t, T)])'
         );
         if (content !== original) {
-            fs.writeFileSync(esmFile, content, 'utf8');
+            writePatched(esmFile, content, 'utf8');
             patched++;
         }
     }
@@ -54,7 +62,7 @@ for (const nodeModulesRoot of nodeModulesRoots) {
             'I(f??new d.Room(s))},[f,JSON.stringify(s,M.roomOptionsStringifyReplacer)])'
         );
         if (content !== original) {
-            fs.writeFileSync(cjsFile, content, 'utf8');
+            writePatched(cjsFile, content, 'utf8');
             patched++;
         }
     }
@@ -72,7 +80,7 @@ for (const nodeModulesRoot of nodeModulesRoots) {
             '}, [passedRoom, JSON.stringify(options, roomOptionsStringifyReplacer)]);'
         );
         if (content !== original) {
-            fs.writeFileSync(srcFile, content, 'utf8');
+            writePatched(srcFile, content, 'utf8');
             patched++;
         }
     }
@@ -102,7 +110,7 @@ for (const nodeModulesRoot of nodeModulesRoots) {
             'options:{adaptiveStream:{pixelDensity:"screen"},singlePeerConnection:false}'
         );
         if (content !== original) {
-            fs.writeFileSync(filePath, content, 'utf8');
+            writePatched(filePath, content, 'utf8');
             patched++;
         }
     }
@@ -121,7 +129,7 @@ for (const nodeModulesRoot of nodeModulesRoots) {
             "adaptiveStream: { pixelDensity: 'screen' },\n        singlePeerConnection: false,"
         );
         if (content !== original) {
-            fs.writeFileSync(elNativeSrc, content, 'utf8');
+            writePatched(elNativeSrc, content, 'utf8');
             patched++;
         }
     }

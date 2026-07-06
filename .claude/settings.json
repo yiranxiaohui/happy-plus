@@ -1,11 +1,11 @@
 {
     "permissions": {
         "allow": [
-            "Bash(pnpm typecheck)",
+            "Bash(bun run typecheck)",
             "Bash(yarn typecheck)",
             "Bash(git fetch*)",
             "Bash(npm view *)",
-            "Bash(pnpm lint)"
+            "Bash(bun run lint)"
         ]
     }
 }

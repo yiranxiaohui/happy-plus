@@ -1,47 +1,66 @@
 # Slim server image (~1.3GB, was ~6GB).
 # Instead of copying the whole ~4.5GB workspace node_modules (dominated by the
-# React Native app's native deps the server never uses), `pnpm deploy` a
-# server-only node_modules and run on node:20-slim. Keeps the tsx-from-source
-# runtime model (tsx is a devDep, so deploy runs WITHOUT --prod to include it).
-# The generated Prisma client is copied (deref'd) from the full install since
-# pnpm deploy doesn't carry .prisma/client. Verified: boots, Prisma connects,
-# serves bundled webapp + API.
+# React Native app's native deps the server never uses), assemble a standalone
+# server-only install at /out and run on node:20-slim. Keeps the
+# tsx-from-source runtime model (tsx is a devDep, so /out installs WITH dev
+# deps). The generated Prisma client is copied (deref'd) from the full install
+# since /out's install skips the server postinstall (prisma generate needs the
+# custom prisma-json-types-generator which only emits compile-time TS types).
+# Runtime stays node/tsx: happy-server's auth (jose Ed25519 via WebCrypto)
+# breaks under the bun runtime — bun is the package manager here, not the VM.
 
 # Stage 1: install full workspace (needed to build wire + resolve server deps)
 FROM node:20 AS deps
 RUN apt-get update && apt-get install -y python3 ffmpeg make g++ build-essential && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
+RUN npm install -g bun@1.3.14
 WORKDIR /repo
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json bun.lock ./
 COPY scripts ./scripts
 COPY patches ./patches
-RUN mkdir -p packages/happy-app packages/happy-server packages/happy-cli packages/happy-wire
+# bun's workspaces list is explicit paths — every workspace package.json must
+# exist or install fails to resolve the workspace graph.
+RUN mkdir -p packages/happy-app packages/happy-server packages/happy-cli packages/happy-agent packages/happy-wire packages/happy-app-logs packages/codium
 COPY packages/happy-app/package.json packages/happy-app/
 COPY packages/happy-server/package.json packages/happy-server/
 COPY packages/happy-cli/package.json packages/happy-cli/
+COPY packages/happy-agent/package.json packages/happy-agent/
 COPY packages/happy-wire/package.json packages/happy-wire/
+COPY packages/happy-app-logs/package.json packages/happy-app-logs/
+COPY packages/codium/package.json packages/codium/
 COPY packages/happy-app/patches packages/happy-app/patches
 COPY packages/happy-server/prisma packages/happy-server/prisma
 COPY packages/happy-cli/scripts packages/happy-cli/scripts
 COPY packages/happy-cli/tools packages/happy-cli/tools
-RUN SKIP_HAPPY_WIRE_BUILD=1 pnpm install --frozen-lockfile
+RUN SKIP_HAPPY_WIRE_BUILD=1 bun install --frozen-lockfile
 
-# Stage 2: build wire + produce a pruned, server-only deploy at /out
+# Stage 2: build wire + assemble a pruned, server-only install at /out
 FROM deps AS builder
 COPY packages/happy-wire ./packages/happy-wire
 COPY packages/happy-server ./packages/happy-server
-RUN pnpm --filter @slopus/happy-wire build
-# deploy (NOT --prod: the runtime is `tsx sources/main.ts`, tsx is a devDep).
-# --legacy avoids the pnpm10 inject-workspace-packages requirement. /out gets a
-# node_modules with only happy-server's graph (+ injected @slopus/happy-wire),
-# i.e. WITHOUT happy-app's huge native deps.
-RUN pnpm --filter happy-server-self-host deploy --legacy /out
+RUN bun run --filter @slopus/happy-wire build
+# Standalone /out install (replaces `pnpm deploy`, which bun has no equivalent
+# for): copy the server package + built wire, rewrite the workspace:* dep to a
+# file: path, carry the root overrides, drop the prisma-generate postinstall,
+# then bun install — dev deps included (tsx is the runtime).
+RUN mkdir -p /out && cp -r packages/happy-server/. /out/ && \
+    cp -r packages/happy-wire /out/.happy-wire && \
+    node -e ' \
+      const fs = require("fs"); \
+      const p = JSON.parse(fs.readFileSync("/out/package.json", "utf8")); \
+      const root = JSON.parse(fs.readFileSync("/repo/package.json", "utf8")); \
+      p.dependencies["@slopus/happy-wire"] = "file:./.happy-wire"; \
+      p.overrides = root.overrides; \
+      p.trustedDependencies = root.trustedDependencies; \
+      delete p.scripts.postinstall; \
+      fs.writeFileSync("/out/package.json", JSON.stringify(p, null, 2));'
+RUN cd /out && bun install
+# Belt & suspenders: make sure the wire in /out/node_modules is the real built
+# copy, not a symlink into /out/.happy-wire (final stage only copies node_modules).
+RUN rm -rf /out/node_modules/@slopus/happy-wire && mkdir -p /out/node_modules/@slopus && \
+    cp -rL /out/.happy-wire /out/node_modules/@slopus/happy-wire
 # Carry the already-generated Prisma client into the pruned tree. The deps-stage
 # postinstall already ran `prisma generate` into /repo/node_modules; copy the
-# generated client + engines over (pnpm deploy doesn't reliably carry the
-# generated .prisma/client, and re-running generate needs the custom
-# prisma-json-types-generator on PATH, which only produces compile-time TS types
-# the tsx runtime never needs).
+# generated client + engines over.
 RUN mkdir -p /out/node_modules/.prisma /out/node_modules/@prisma && \
     cp -rL /repo/node_modules/.prisma/. /out/node_modules/.prisma/ && \
     cp -rL /repo/node_modules/@prisma/. /out/node_modules/@prisma/
@@ -56,8 +75,8 @@ ENV NODE_ENV=production
 ENV APP_ENV=production
 COPY packages/happy-wire ./packages/happy-wire
 COPY packages/happy-app ./packages/happy-app
-RUN pnpm --filter @slopus/happy-wire build
-RUN pnpm --filter happy-app exec expo export --platform web --output-dir dist
+RUN bun run --filter @slopus/happy-wire build
+RUN cd packages/happy-app && bun x expo export --platform web --output-dir dist
 
 # Stage 3: slim runtime
 FROM node:20-slim AS runner
@@ -66,7 +85,7 @@ FROM node:20-slim AS runner
 RUN apt-get update && apt-get install -y python3 ffmpeg openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 WORKDIR /app
-# Pruned deps + prisma schema/client (+ generated engine) from the deploy.
+# Pruned deps + prisma schema/client (+ generated engine) from the standalone install.
 COPY --from=builder /out/node_modules ./node_modules
 COPY --from=builder /out/prisma ./prisma
 COPY --from=builder /out/package.json ./package.json

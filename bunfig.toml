@@ -1,0 +1,5 @@
+# Bun 1.3 defaults to the isolated linker for workspaces. This repo (patches/*.cjs,
+# Metro, patch-package paths) assumes a hoisted node_modules layout — same as the
+# old pnpm setup (.npmrc had node-linker=hoisted + shamefully-hoist).
+[install]
+linker = "hoisted"

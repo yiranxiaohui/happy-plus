@@ -69,7 +69,7 @@ Present as options. Wait for confirmation.
 
 ### Step 4: Version bump
 
-Edit `packages/happy-cli/package.json` directly — do NOT use `npm version` (it chokes on pnpm workspace protocol).
+Edit `packages/happy-cli/package.json` directly — do NOT use `npm version` (it chokes on the workspace: protocol).
 
 IMPORTANT: do this **before** build/test for the CLI. The build imports `package.json` and bakes the version into the generated bundle. If you build first and bump later, `happy --version` can still report the old prerelease version even though npm metadata shows the new one.
 
@@ -77,7 +77,7 @@ IMPORTANT: do this **before** build/test for the CLI. The build imports `package
 
 ```bash
 cd packages/happy-cli
-pnpm --filter happy run build
+bun run --filter happy build
 ```
 
 Report success/failure. Stop on failure.
@@ -91,7 +91,7 @@ Packaged installs resolve those from the separately installed
 
 If the CLI release depends on self-host server changes, release
 `happy-server-self-host` separately: regenerate Prisma, build the bundled webapp
-with `pnpm --filter happy-server-self-host run bundle:webapp`, then publish the
+with `bun run --filter happy-server-self-host bundle:webapp`, then publish the
 server package. The server package is a JS/TS npm package; npm handles platform
 specific dependencies such as Prisma and sharp normally. Do not pass
 `--ignore-scripts` when publishing it; its `prepublishOnly` script rebuilds the
@@ -103,7 +103,7 @@ chain yourself to catch failures early — the `bundle:webapp` step runs a multi
 `main` can be red even when the PR "passed":
 
 ```bash
-cd packages/happy-server && pnpm run build && pnpm run bundle:webapp && pnpm test
+cd packages/happy-server && bun run build && bun run bundle:webapp && bun run test
 ```
 
 (Observed: `1332` merged a `standalone.spec.ts` test that only passes on Windows
@@ -114,7 +114,7 @@ aborted the publish at the `prepublishOnly` test step.)
 
 ```bash
 cd packages/happy-cli
-pnpm --filter happy exec vitest run --project unit
+bun run --filter happy exec vitest run --project unit
 ```
 
 Integration tests are slow and flaky — skip them for releases. Unit tests are the gate.
@@ -126,12 +126,11 @@ Report results. If failures, ask the user whether to proceed or abort.
 
 ```bash
 cd packages/happy-cli
-pnpm publish --tag {channel} --no-git-checks
+bun publish --tag {channel}
 ```
 
-- `--no-git-checks`: allows dirty working tree (we already verified state)
 
-⚠️ **NEVER pass `--ignore-scripts`.** `prepublishOnly` runs `pnpm test` (build +
+⚠️ **NEVER pass `--ignore-scripts`.** `prepublishOnly` runs `bun run test` (build +
 unit tests), and **the build re-stamps the version into the bundle** (Step 4).
 Skipping it ships whatever stale `dist/` happens to be on disk. Two rationalizations
 look reasonable and are both WRONG:
@@ -151,11 +150,11 @@ look reasonable and are both WRONG:
 If you catch yourself reasoning toward `--ignore-scripts`, stop: there is no case in
 this repo where it is correct for a publish.
 
-**MUST use `pnpm publish` — never `npm publish`.** This is a pnpm workspace; `npm
+**MUST use `bun publish` — never `npm publish`.** This is a bun workspace; `npm
 publish` mis-resolves the workspace protocol and the `bin` entries and ships a
 broken tarball (a regression was reported for exactly this and the fix was to
-standardize on `pnpm publish`). `pnpm publish` is the only supported path. Do not
-"fall back" to `npm publish` if pnpm errors — diagnose the pnpm error instead.
+standardize on `bun publish`). `bun publish` is the only supported path. Do not
+"fall back" to `npm publish` if bun errors — diagnose the bun error instead.
 
 **Transient TLS upload failures are expected — retry, don't panic.** The tarball
 is large (~160 MB, ~1000 files). The upload to `registry.npmjs.org` frequently
@@ -169,7 +168,7 @@ npm error ... ssl3_read_bytes:ssl/tls alert bad record mac ...
 This is network-layer corruption of a single TLS record on the long upload, **not**
 a code, auth, or version problem. A single bad record kills the whole stream, so
 each fresh attempt has an independent chance to complete. Just re-run the exact
-same `pnpm publish` command — it typically succeeds within 2–3 attempts (it took
+same `bun publish` command — it typically succeeds within 2–3 attempts (it took
 3 on the 1.1.10-beta.4 release). Before each retry, confirm it did NOT actually
 land (see Step 8); npm rejects re-publishing an already-published version, which
 would be a misleading error. A clean success prints `+ happy@X.Y.Z`.
@@ -255,16 +254,16 @@ options in order of popularity:
 
   ```bash
   # Preview (most common)
-  pnpm --filter happy-app run ota
+  bun run --filter happy-app ota
 
   # Production
-  pnpm --filter happy-app run ota:production
+  bun run --filter happy-app ota:production
   ```
 
 OTA scripts require a message — stdin is not readable from Claude Code, so run the
 underlying `eas update` directly with `--message`:
   ```bash
-  cd packages/happy-app && APP_ENV=preview NODE_ENV=preview tsx sources/scripts/parseChangelog.ts && pnpm typecheck && eas update --branch preview --message "<message>"
+  cd packages/happy-app && APP_ENV=preview NODE_ENV=preview tsx sources/scripts/parseChangelog.ts && bun run typecheck && eas update --branch preview --message "<message>"
   ```
 
 #### Native Builds
@@ -387,6 +386,6 @@ Separate repo, not part of this monorepo. Guide the user to push to that repo.
 - **Always verify before publishing** — show the user what will be published and get confirmation.
 - **Do not bundle self-host server/webapp into `happy`** — self-host runtime and the bundled webapp ship through `happy-server-self-host`, not the main CLI package.
 - **Unit tests are the gate, not integration tests** — integration tests are slow and have flaky abort/interrupt tests.
-- **Use pnpm publish, not npm publish** — avoids workspace protocol issues.
+- **Use bun publish, not npm publish** — avoids workspace protocol issues.
 - **Never use --ignore-scripts for package publishing** — prepublish scripts are the last guard before npm receives the tarball.
 - **Never force-push tags** — if a tag exists, stop and ask.

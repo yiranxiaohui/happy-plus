@@ -22,6 +22,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Write via unlink-first: bun (like pnpm) links node_modules files from its
+// global cache; writing in place would corrupt the shared cache copy.
+function writePatched(file, content) {
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    fs.writeFileSync(file, content, 'utf8');
+}
+
+
 const targets = [
     path.resolve(__dirname, '..', 'node_modules', '@pierre', 'trees', 'dist', 'render', 'runtime.js'),
     path.resolve(__dirname, '..', 'packages', 'happy-app', 'node_modules', '@pierre', 'trees', 'dist', 'render', 'runtime.js'),
@@ -48,7 +56,7 @@ for (const file of targets) {
         '\n' +
         HOOKS_IMPORT +
         src.slice(insertAt);
-    fs.writeFileSync(file, next, 'utf8');
+    writePatched(file, next, 'utf8');
     patched++;
 }
 

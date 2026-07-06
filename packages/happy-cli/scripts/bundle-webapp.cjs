@@ -41,7 +41,7 @@ function main() {
 
     console.log(`→ Building happy-app web bundle (expo export)`);
     rmrf(APP_DIST);
-    run('pnpm', ['exec', 'expo', 'export', '-p', 'web', '--output-dir', 'dist'], { cwd: APP_DIR });
+    run('bun', ['x', 'expo', 'export', '-p', 'web', '--output-dir', 'dist'], { cwd: APP_DIR });
 
     if (!fs.existsSync(path.join(APP_DIST, 'index.html'))) {
         console.error(`Expected ${path.join(APP_DIST, 'index.html')} after expo export, but it's missing.`);

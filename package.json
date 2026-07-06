@@ -2,11 +2,11 @@
     "name": "monorepo",
     "private": true,
     "scripts": {
-        "cli": "pnpm --filter happy cli",
+        "cli": "bun run --filter happy cli",
         "release": "node ./scripts/release.cjs",
-        "web": "pnpm --filter happy-app web",
-        "codium": "pnpm --filter codium dev",
-        "app-logs": "pnpm --filter happy-app-logs start",
+        "web": "bun run --filter happy-app web",
+        "codium": "bun run --filter codium dev",
+        "app-logs": "bun run --filter happy-app-logs start",
         "postinstall": "node ./scripts/postinstall.cjs",
         "env:new": "tsx environments/environments.ts new",
         "env:list": "tsx environments/environments.ts list",
@@ -20,7 +20,7 @@
         "env:cli": "tsx environments/environments.ts run cli",
         "env:seed": "tsx environments/environments.ts seed",
         "env:up": "tsx environments/environments.ts up",
-        "env:up:authenticated": "pnpm env:up --template authenticated-empty",
+        "env:up:authenticated": "bun run env:up --template authenticated-empty",
         "env:down": "tsx environments/environments.ts down",
         "env:tailscale": "tsx environments/environments.ts tailscale"
     },
@@ -35,25 +35,24 @@
             "packages/codium"
         ]
     },
-    "pnpm": {
-        "overrides": {
-            "whatwg-url": "14.2.0",
-            "parse-path": "7.0.3",
-            "@types/parse-path": "7.0.3"
-        },
-        "onlyBuiltDependencies": [
-            "@more-tech/react-native-libsodium",
-            "@prisma/client",
-            "@prisma/engines",
-            "@shopify/react-native-skia",
-            "@tailwindcss/oxide",
-            "better-sqlite3",
-            "electron",
-            "esbuild",
-            "node-pty",
-            "prisma",
-            "sharp"
-        ]
+    "overrides": {
+        "whatwg-url": "14.2.0",
+        "parse-path": "7.0.3",
+        "@types/parse-path": "7.0.3",
+        "vite": "8.0.9"
     },
-    "packageManager": "pnpm@10.11.0"
+    "trustedDependencies": [
+        "@more-tech/react-native-libsodium",
+        "@prisma/client",
+        "@prisma/engines",
+        "@shopify/react-native-skia",
+        "@tailwindcss/oxide",
+        "better-sqlite3",
+        "electron",
+        "esbuild",
+        "node-pty",
+        "prisma",
+        "sharp"
+    ],
+    "packageManager": "bun@1.3.14"
 }

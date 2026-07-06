@@ -42,7 +42,7 @@ function run(cmd, args, { allowFailure = false } = {}) {
     return status;
 }
 
-run('pnpm', ['run', 'build']);
+run('bun', ['run', 'build']);
 run('happy', ['daemon', 'stop'], { allowFailure: true });
 run('npm', ['link']);
 run('happy', ['daemon', 'start']);
