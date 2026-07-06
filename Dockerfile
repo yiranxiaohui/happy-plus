@@ -2,14 +2,14 @@
 # Uses PGlite (embedded Postgres), local filesystem storage, no Redis
 
 # Stage 1: install dependencies
-FROM node:20 AS deps
+FROM node:24 AS deps
 
 RUN apt-get update && apt-get install -y python3 make g++ build-essential && rm -rf /var/lib/apt/lists/*
 RUN npm install -g bun@1.3.14
 
 WORKDIR /repo
 
-COPY package.json bun.lock ./
+COPY package.json bun.lock bunfig.toml ./
 COPY scripts ./scripts
 COPY patches ./patches
 

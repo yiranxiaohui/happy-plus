@@ -10,11 +10,11 @@
 # breaks under the bun runtime — bun is the package manager here, not the VM.
 
 # Stage 1: install full workspace (needed to build wire + resolve server deps)
-FROM node:20 AS deps
+FROM node:24 AS deps
 RUN apt-get update && apt-get install -y python3 ffmpeg make g++ build-essential && rm -rf /var/lib/apt/lists/*
 RUN npm install -g bun@1.3.14
 WORKDIR /repo
-COPY package.json bun.lock ./
+COPY package.json bun.lock bunfig.toml ./
 COPY scripts ./scripts
 COPY patches ./patches
 # bun's workspaces list is explicit paths — every workspace package.json must
@@ -44,6 +44,7 @@ RUN bun run --filter @slopus/happy-wire build
 # then bun install — dev deps included (tsx is the runtime).
 RUN mkdir -p /out && cp -r packages/happy-server/. /out/ && \
     cp -r packages/happy-wire /out/.happy-wire && \
+    cp /repo/bunfig.toml /out/bunfig.toml && \
     node -e ' \
       const fs = require("fs"); \
       const p = JSON.parse(fs.readFileSync("/out/package.json", "utf8")); \
