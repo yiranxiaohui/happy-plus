@@ -1,6 +1,6 @@
 import * as React from "react";
-import { View, Text, Pressable, Platform } from "react-native";
-import { StyleSheet } from 'react-native-unistyles';
+import { View, Text, Platform } from "react-native";
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@expo/vector-icons';
 import { MarkdownView } from "./markdown/MarkdownView";
 import { t } from '@/text';
@@ -9,9 +9,11 @@ import { Metadata } from "@/sync/storageTypes";
 import { ToolView } from "./tools/ToolView";
 import { AgentEvent } from "@/sync/typesRaw";
 import { sync } from '@/sync/sync';
+import { useSetting } from '@/sync/storage';
 import { Option } from './markdown/MarkdownView';
 import { layout } from "./layout";
 import { parseLocalCommandMessage, isUserSlashCommandEcho } from './parseLocalCommandMessage';
+import { resolveUserMessageBubbleColor } from '@/utils/userMessageBubbleColor';
 
 
 export const MessageView = React.memo((props: {
@@ -19,11 +21,6 @@ export const MessageView = React.memo((props: {
   metadata: Metadata | null;
   sessionId: string;
   getMessageById?: (id: string) => Message | null;
-  /**
-   * Long-press handler for user-text bubbles. Wired by ChatList from
-   * the active session screen and used by the fork-from-message flow.
-   */
-  onForkFromUserMessage?: (messageId: string, rewindPointId: string | undefined, messageText: string) => void;
 }) => {
   return (
     <View
@@ -36,7 +33,6 @@ export const MessageView = React.memo((props: {
           metadata={props.metadata}
           sessionId={props.sessionId}
           getMessageById={props.getMessageById}
-          onForkFromUserMessage={props.onForkFromUserMessage}
         />
       </View>
     </View>
@@ -49,7 +45,6 @@ function RenderBlock(props: {
   metadata: Metadata | null;
   sessionId: string;
   getMessageById?: (id: string) => Message | null;
-  onForkFromUserMessage?: (messageId: string, rewindPointId: string | undefined, messageText: string) => void;
 }): React.ReactElement {
   switch (props.message.kind) {
     case 'user-text':
@@ -58,7 +53,6 @@ function RenderBlock(props: {
           message={props.message}
           metadata={props.metadata}
           sessionId={props.sessionId}
-          onForkFromUserMessage={props.onForkFromUserMessage}
         />
       );
 
@@ -88,21 +82,18 @@ function UserTextBlock(props: {
   message: UserTextMessage;
   metadata: Metadata | null;
   sessionId: string;
-  onForkFromUserMessage?: (messageId: string, rewindPointId: string | undefined, messageText: string) => void;
 }) {
   const handleOptionPress = React.useCallback((option: Option) => {
     sync.sendMessage(props.sessionId, option.title, { source: 'option' });
   }, [props.sessionId]);
 
-  const rewindPointId = props.message.claudeUuid ?? props.message.codexItemId;
-  const canFork = Boolean(props.onForkFromUserMessage)
-    && (Boolean(rewindPointId) || props.metadata?.flavor === 'codex');
-  const handleLongPress = React.useCallback(() => {
-    if (props.onForkFromUserMessage) {
-      props.onForkFromUserMessage(props.message.id, rewindPointId, props.message.text);
-    }
-  }, [props.message.id, props.message.text, props.onForkFromUserMessage, rewindPointId]);
-
+  const userMessageBubbleColor = useSetting('userMessageBubbleColor');
+  const { theme } = useUnistyles();
+  const bubblePalette = resolveUserMessageBubbleColor(userMessageBubbleColor, theme.dark);
+  const bubbleStyle = {
+    backgroundColor: bubblePalette.background,
+    borderColor: bubblePalette.border,
+  };
   // Claude Agent SDK emits synthetic user messages wrapped in tags like
   // <local-command-caveat>…</local-command-caveat> and
   // <command-message>…</command-message><command-name>/foo</command-name>
@@ -130,13 +121,9 @@ function UserTextBlock(props: {
   if (parsed.kind === 'goal-run') {
     return (
       <View style={styles.userMessageContainer}>
-        <Pressable
-          onLongPress={canFork ? handleLongPress : undefined}
-          delayLongPress={400}
-          style={[styles.userMessageBubble, styles.goalMessageBubble]}
-        >
+        <View style={[styles.userMessageBubble, styles.userMessageBubbleSolid, bubbleStyle, styles.goalMessageBubble]}>
           <MarkdownView markdown={parsed.goal} onOptionPress={handleOptionPress} sessionId={props.sessionId} />
-        </Pressable>
+        </View>
         <View style={styles.goalSentRow}>
           <Ionicons name="locate-outline" size={16} color={styles.goalSentText.color} />
           <Text style={styles.goalSentText}>{t('message.sentAsGoal')}</Text>
@@ -148,15 +135,11 @@ function UserTextBlock(props: {
     return (
       <View style={styles.userMessageContainer}>
         {parsed.args ? (
-          <Pressable
-            onLongPress={canFork ? handleLongPress : undefined}
-            delayLongPress={400}
-            style={[styles.userMessageBubble, styles.commandMessageBubble]}
-          >
+          <View style={[styles.userMessageBubble, styles.userMessageBubbleSolid, bubbleStyle, styles.commandMessageBubble]}>
             <MarkdownView markdown={parsed.args} onOptionPress={handleOptionPress} sessionId={props.sessionId} />
-          </Pressable>
+          </View>
         ) : null}
-        <View style={styles.commandChip}>
+        <View style={[styles.commandChip, styles.userMessageBubbleSolid, bubbleStyle]}>
           <Text style={styles.commandChipText}>/{parsed.commandName}</Text>
         </View>
       </View>
@@ -165,13 +148,11 @@ function UserTextBlock(props: {
 
   return (
     <View style={styles.userMessageContainer}>
-      <Pressable
-        onLongPress={canFork ? handleLongPress : undefined}
-        delayLongPress={400}
-        style={styles.userMessageBubble}
-      >
+      {/* Text owns long-press so native selection / Markdown Copy v2 can work
+          without also opening the rewind picker. Rewind remains in session actions. */}
+      <View style={[styles.userMessageBubble, styles.userMessageBubbleSolid, bubbleStyle]}>
         <MarkdownView markdown={parsed.text} onOptionPress={handleOptionPress} sessionId={props.sessionId} />
-      </Pressable>
+      </View>
     </View>
   );
 }
@@ -289,6 +270,10 @@ const styles = StyleSheet.create((theme) => ({
     marginBottom: 12,
     maxWidth: '100%',
   },
+  userMessageBubbleSolid: {
+    borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
+    overflow: 'hidden',
+  },
   goalMessageBubble: {
     marginBottom: 6,
   },
@@ -309,6 +294,8 @@ const styles = StyleSheet.create((theme) => ({
   },
   commandChip: {
     backgroundColor: theme.colors.userMessageBackground,
+    borderColor: theme.colors.divider,
+    borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 2,
     borderRadius: 10,
@@ -323,7 +310,8 @@ const styles = StyleSheet.create((theme) => ({
   },
   agentMessageContainer: {
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginTop: 4,
+    marginBottom: 16,
     borderRadius: 16,
     maxWidth: '100%',
   },

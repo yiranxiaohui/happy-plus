@@ -5,6 +5,7 @@ import { RemoteModeDisplay } from "@/ui/ink/RemoteModeDisplay";
 import React from "react";
 import { claudeRemote } from "./claudeRemote";
 import { PermissionHandler } from "./utils/permissionHandler";
+import { mergeUsageLimits } from "./utils/usageLimits";
 import { Future } from "@/utils/future";
 import { SDKAssistantMessage, SDKMessage, SDKUserMessage } from "./sdk";
 import { formatClaudeMessageForInk } from "@/ui/messageFormatterInk";
@@ -129,7 +130,7 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
         sessionId: session.sessionId || 'unknown',
         cwd: session.path,
         version: process.env.npm_package_version
-    }, permissionHandler.getResponses());
+    }, permissionHandler.getResponseLookup());
 
 
     // Handle messages
@@ -200,8 +201,7 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
                 for (let i = 0; i < content.length; i++) {
                     const c = content[i];
                     if (c.type === 'tool_result' && c.tool_use_id) {
-                        const responses = permissionHandler.getResponses();
-                        const response = responses.get(c.tool_use_id);
+                        const response = permissionHandler.getResponseForToolUseId(c.tool_use_id);
 
                         if (response) {
                             const permissions: PermissionsField = {
@@ -412,6 +412,14 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
                             slashCommands: metadata.slashCommands,
                             mcpServers: metadata.mcpServers,
                             skills: metadata.skills,
+                        }));
+                    },
+                    onUsageLimits: (patch) => {
+                        // Merging against currentAgentState re-hydrates window
+                        // state across claudeRemote re-entries (mode switches).
+                        session.client.updateAgentState((currentAgentState) => ({
+                            ...currentAgentState,
+                            usageLimits: mergeUsageLimits(currentAgentState.usageLimits, patch),
                         }));
                     },
                     onQueryReady: (q) => {

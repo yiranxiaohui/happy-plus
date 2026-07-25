@@ -6,12 +6,13 @@
  */
 
 import { logger } from "@/lib";
-import { PermissionResult } from "../sdk/types";
+import type { CanCallToolOptions, PermissionResult } from "../sdk/types";
 import { Session } from "../session";
 import { EnhancedMode, PermissionMode } from "../loop";
 import { getToolDescriptor } from "./getToolDescriptor";
+import { isClaudeBypassEquivalent, mapToClaudeMode } from "./permissionMode";
 
-interface PermissionResponse {
+export interface PermissionResponse {
     id: string;
     approved: boolean;
     reason?: string;
@@ -28,6 +29,9 @@ interface PendingRequest {
     toolName: string;
     input: unknown;
 }
+
+type PermissionResponseForLookup = Pick<PermissionResponse, 'approved' | 'mode' | 'reason'>;
+export type PermissionResponseLookup = Pick<ReadonlyMap<string, PermissionResponseForLookup>, 'get' | 'has'>;
 
 export class PermissionHandler {
     private responses = new Map<string, PermissionResponse>();
@@ -54,7 +58,17 @@ export class PermissionHandler {
     }
 
     handleModeChange(mode: PermissionMode) {
+        const previousMode = this.permissionMode;
         this.permissionMode = mode;
+
+        // The message-queue hash excludes permissionMode, so a default -> yolo
+        // switch never restarts the SDK query. Push the mapped mode into the
+        // live query so the SDK stops consulting canUseTool on its own.
+        if (this.setPermissionModeCallback && mapToClaudeMode(previousMode) !== mapToClaudeMode(mode)) {
+            this.setPermissionModeCallback(mapToClaudeMode(mode)).catch((err) => {
+                logger.debug('Failed to sync permission mode via SDK:', err);
+            });
+        }
     }
 
     /**
@@ -129,13 +143,13 @@ export class PermissionHandler {
      * Creates the canCallTool callback for the SDK.
      * Uses toolUseID from official SDK callback options directly.
      */
-    handleToolCall = async (toolName: string, input: unknown, mode: EnhancedMode, options: { signal: AbortSignal; toolUseID: string }): Promise<PermissionResult> => {
-        const toolCallId = options.toolUseID;
+    handleToolCall = async (toolName: string, input: unknown, mode: EnhancedMode, options: CanCallToolOptions): Promise<PermissionResult> => {
+        const toolCallId = this.getPermissionRequestId(options);
 
         // AskUserQuestion requires user interaction — never auto-approve, even in bypassPermissions mode.
         // This mirrors Claude SDK's internal requiresUserInteraction() check.
         if (toolName === 'AskUserQuestion') {
-            return this.handlePermissionRequest(toolCallId, toolName, input, options.signal);
+            return this.handlePermissionRequest(toolCallId, toolName, input, options.signal, options.toolUseID);
         }
 
         // Check if tool is explicitly allowed
@@ -162,7 +176,7 @@ export class PermissionHandler {
 
         // ExitPlanMode always requires user approval — never auto-approve it.
         if (descriptor.exitPlan) {
-            return this.handlePermissionRequest(toolCallId, toolName, input, options.signal);
+            return this.handlePermissionRequest(toolCallId, toolName, input, options.signal, options.toolUseID);
         }
 
         //
@@ -176,7 +190,7 @@ export class PermissionHandler {
             return { behavior: 'deny', message: 'Permission denied: tool is not pre-approved and dontAsk mode does not prompt.' };
         }
 
-        if (this.permissionMode === 'bypassPermissions') {
+        if (isClaudeBypassEquivalent(this.permissionMode)) {
             return { behavior: 'allow', updatedInput: input as Record<string, unknown> };
         }
 
@@ -194,7 +208,11 @@ export class PermissionHandler {
         // Approval flow
         //
 
-        return this.handlePermissionRequest(toolCallId, toolName, input, options.signal);
+        return this.handlePermissionRequest(toolCallId, toolName, input, options.signal, options.toolUseID);
+    }
+
+    private getPermissionRequestId(options: CanCallToolOptions): string {
+        return options.agentID ? `${options.agentID}:${options.toolUseID}` : options.toolUseID;
     }
 
     /**
@@ -204,7 +222,8 @@ export class PermissionHandler {
         id: string,
         toolName: string,
         input: unknown,
-        signal: AbortSignal
+        signal: AbortSignal,
+        toolUseId: string
     ): Promise<PermissionResult> {
         return new Promise<PermissionResult>((resolve, reject) => {
             // Set up abort signal handling
@@ -246,7 +265,9 @@ export class PermissionHandler {
                 }
             });
 
-            // Update agent state
+            // Update agent state. toolUseId carries the raw provider id so the
+            // app can attach the permission card to its tool call even when
+            // the request id is subagent-scoped (`agentID:toolUseID`).
             this.session.client.updateAgentState((currentState) => ({
                 ...currentState,
                 requests: {
@@ -254,7 +275,8 @@ export class PermissionHandler {
                     [id]: {
                         tool: toolName,
                         arguments: input,
-                        createdAt: Date.now()
+                        createdAt: Date.now(),
+                        ...(toolUseId !== id ? { toolUseId } : {})
                     }
                 }
             }));
@@ -298,7 +320,7 @@ export class PermissionHandler {
      */
     isAborted(toolCallId: string): boolean {
         // If tool not approved, it's aborted
-        if (this.responses.get(toolCallId)?.approved === false) {
+        if (this.getResponseForToolUseId(toolCallId)?.approved === false) {
             return true;
         }
 
@@ -397,5 +419,32 @@ export class PermissionHandler {
      */
     getResponses(): Map<string, PermissionResponse> {
         return this.responses;
+    }
+
+    getResponseForToolUseId(toolCallId: string): PermissionResponse | undefined {
+        const exact = this.responses.get(toolCallId);
+        if (exact) {
+            return exact;
+        }
+
+        let match: PermissionResponse | undefined;
+        const suffix = `:${toolCallId}`;
+        for (const [id, response] of this.responses.entries()) {
+            if (!id.endsWith(suffix)) {
+                continue;
+            }
+            if (match) {
+                return undefined;
+            }
+            match = response;
+        }
+        return match;
+    }
+
+    getResponseLookup(): PermissionResponseLookup {
+        return {
+            get: (toolCallId: string) => this.getResponseForToolUseId(toolCallId),
+            has: (toolCallId: string) => this.getResponseForToolUseId(toolCallId) !== undefined,
+        };
     }
 }

@@ -46,6 +46,7 @@ export type JsRuntime = 'node' | 'bun'
 export interface StartOptions {
     model?: string
     permissionMode?: PermissionMode
+    effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'
     startingMode?: 'local' | 'remote'
     shouldStartDaemon?: boolean
     claudeEnvVars?: Record<string, string>
@@ -143,6 +144,7 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
     // Lineage from the daemon's spawn RPC (set by app-side fork / duplicate).
     const forkedFromSessionId = process.env.HAPPY_FORKED_FROM_SESSION_ID;
     const forkedFromMessageId = process.env.HAPPY_FORKED_FROM_MESSAGE_ID;
+    const isSideChat = process.env.HAPPY_SIDE_CHAT === '1';
 
     let metadata: Metadata = {
         path: workingDirectory,
@@ -165,6 +167,7 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
         dangerouslySkipPermissions,
         ...(forkedFromSessionId ? { parentSessionId: forkedFromSessionId } : {}),
         ...(forkedFromMessageId ? { forkedFromMessageId } : {}),
+        ...(isSideChat ? { isSideChat: true } : {}),
     };
 
     // Check for session reconnection env vars (set by daemon for resume-in-place)
@@ -326,29 +329,34 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
     // message it needs.
     const forkClaudeSessionId = process.env.HAPPY_FORK_CLAUDE_SESSION_ID;
     if (!reconnectSessionId && forkClaudeSessionId) {
-        const jsonlPath = join(getProjectPath(workingDirectory), `${forkClaudeSessionId}.jsonl`);
-        try {
-            const file = await readFile(jsonlPath, 'utf-8');
-            const lines = file.split('\n');
-            let backfilled = 0;
-            for (const line of lines) {
-                if (line.trim().length === 0) continue;
-                let parsed: unknown;
-                try { parsed = JSON.parse(line); } catch { continue; }
-                const result = RawJSONLinesSchema.safeParse(parsed);
-                if (!result.success) continue;
-                await session.sendClaudeSessionMessageFromLocalTranscript(result.data as RawJSONLines);
-                backfilled += 1;
+        // Side chats resume the forked JSONL for full model context via the
+        // SDK (`resume:`), but we deliberately do NOT replay the pre-fork
+        // history into the UI — a side chat starts empty from the moment it
+        // was opened, so the user only sees the aside they began.
+        if (!isSideChat) {
+            const jsonlPath = join(getProjectPath(workingDirectory), `${forkClaudeSessionId}.jsonl`);
+            try {
+                const file = await readFile(jsonlPath, 'utf-8');
+                const lines = file.split('\n');
+                let backfilled = 0;
+                for (const line of lines) {
+                    if (line.trim().length === 0) continue;
+                    let parsed: unknown;
+                    try { parsed = JSON.parse(line); } catch { continue; }
+                    const result = RawJSONLinesSchema.safeParse(parsed);
+                    if (!result.success) continue;
+                    await session.sendClaudeSessionMessageFromLocalTranscript(result.data as RawJSONLines);
+                    backfilled += 1;
+                }
+                logger.debug(`[FORK BACKFILL] Replayed ${backfilled} historical messages from ${jsonlPath}`);
+            } catch (error) {
+                logger.debug(`[FORK BACKFILL] Failed to read ${jsonlPath}:`, error);
             }
-            logger.debug(`[FORK BACKFILL] Replayed ${backfilled} historical messages from ${jsonlPath}`);
-            // Bind the new Happy session to the forked Claude UUID up
-            // front so the metadata is consistent the moment the app
-            // opens this session — even before the SDK's hook callback
-            // fires.
-            session.updateMetadata((meta) => ({ ...meta, claudeSessionId: forkClaudeSessionId }));
-        } catch (error) {
-            logger.debug(`[FORK BACKFILL] Failed to read ${jsonlPath}:`, error);
         }
+        // Bind the new Happy session to the forked Claude UUID up front so the
+        // metadata is consistent the moment the app opens this session — even
+        // before the SDK's hook callback fires. Done regardless of backfill.
+        session.updateMetadata((meta) => ({ ...meta, claudeSessionId: forkClaudeSessionId }));
     }
 
     // Ring buffer of user prompts that just arrived from the app via the
@@ -548,7 +556,7 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
     let currentAppendSystemPrompt: string | undefined = undefined; // Track current append system prompt
     let currentAllowedTools: string[] | undefined = undefined; // Track current allowed tools
     let currentDisallowedTools: string[] | undefined = undefined; // Track current disallowed tools
-    let currentEffort: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | undefined = DEFAULT_CLAUDE_EFFORT; // Track current Claude effort (thinking depth)
+    let currentEffort: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | undefined = options.effort ?? DEFAULT_CLAUDE_EFFORT; // Track current Claude effort (thinking depth)
 
     const resetCurrentModeDefaults = () => {
         currentPermissionMode = initialPermissionMode;
@@ -558,7 +566,7 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
         currentAppendSystemPrompt = undefined;
         currentAllowedTools = undefined;
         currentDisallowedTools = undefined;
-        currentEffort = DEFAULT_CLAUDE_EFFORT;
+        currentEffort = options.effort ?? DEFAULT_CLAUDE_EFFORT;
         logger.debug('[loop] Reset current mode defaults after abort');
     };
     const currentEnhancedMode = (): EnhancedMode => ({

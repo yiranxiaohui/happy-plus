@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useHappyAction } from '@/hooks/useHappyAction';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { Modal } from '@/modal';
-import { machineResumeSession, sessionArchive, sessionKill, forkAndSpawn, type ForkSource } from '@/sync/ops';
+import { machineResumeSession, sessionArchive, sessionKill, sessionSetAgentModes, forkAndSpawn, type ForkSource } from '@/sync/ops';
 import { maybeCleanupWorktree } from '@/hooks/useWorktreeCleanup';
 import { storage, useLocalSetting, useMachine, useSetting } from '@/sync/storage';
 import { Machine, Session } from '@/sync/storageTypes';
@@ -17,9 +17,11 @@ import { getSessionForkSource } from '@/utils/sessionFork';
 import { useRouter } from 'expo-router';
 import { useSession } from '@/sync/storage';
 import { DuplicateSheet } from '@/components/DuplicateSheet';
+import type { SessionActionShortcutId } from '@/keyboard/shortcuts';
+import { isRigMetadata } from '@/sync/rig';
 
 export interface SessionActionItem {
-    id: string;
+    id: SessionActionShortcutId;
     label: string;
     icon: string;
     onPress: () => void;
@@ -40,6 +42,14 @@ type ResumeAvailability = {
 };
 
 function getResumeAvailability(session: Session, machine: Machine | null | undefined, isConnected: boolean): ResumeAvailability {
+    if (isRigMetadata(session.metadata) || session.metadata?.capabilities?.resume === false) {
+        return {
+            canResume: false,
+            canShowResume: false,
+            subtitle: '',
+            message: '',
+        };
+    }
     if (isConnected) {
         return {
             canResume: false,
@@ -132,6 +142,7 @@ export function useSessionQuickActions(
     ]);
     const canFork = Boolean(
         expResumeSession
+        && !isRigMetadata(session.metadata)
         && forkSource
         && machine
         && isMachineOnline(machine),
@@ -183,11 +194,10 @@ export function useSessionQuickActions(
                 await sync.refreshSessions();
 
                 if (session.permissionMode) {
-                    storage.getState().updateSessionPermissionMode(result.sessionId, session.permissionMode);
+                    sessionSetAgentModes(result.sessionId, { permissionMode: session.permissionMode });
                 }
-                if (session.modelMode) {
-                    storage.getState().updateSessionModelMode(result.sessionId, session.modelMode);
-                }
+                // Model / effort picks survive resume on their own — they live
+                // in the session's synced metadata (#1492).
 
                 navigateToSession(result.sessionId);
                 return;

@@ -35,6 +35,7 @@ import { handleResumeCommand } from '@/resume/handleResumeCommand'
 import { ensureDaemonRunning } from './daemon/ensureDaemonRunning'
 import { handleCodexCommand } from './commands/codexCommand'
 import { BIN_NAME } from './ui/binName'
+import { sanitizeSessionEnvironment } from './daemon/sessionEnvironment'
 
 
 (async () => {
@@ -331,8 +332,11 @@ Conversation history is preserved on the server, but in-flight tool calls are in
     
     // Handle gemini command (ACP-based agent)
     try {
+      // The standalone gemini CLI is EOL; agy (Antigravity CLI) is its successor.
+      console.warn(chalk.yellow('⚠ The gemini backend is deprecated and may be removed in a future release. Use `happy agy` (Antigravity CLI) instead.'));
+
       const { runGemini } = await import('@/gemini/runGemini');
-      
+
       // Parse startedBy argument
       let startedBy: 'daemon' | 'terminal' | undefined = undefined;
       for (let i = 1; i < args.length; i++) {
@@ -440,6 +444,36 @@ Conversation history is preserved on the server, but in-flight tool calls are in
       process.exit(1)
     }
     return;
+  } else if (subcommand === 'agy') {
+    try {
+      const { runAgy } = await import('@/agy/runAgy');
+
+      let startedBy: 'daemon' | 'terminal' | undefined = undefined;
+      let verbose = false;
+      for (let i = 1; i < args.length; i++) {
+        if (args[i] === '--started-by') {
+          startedBy = args[++i] as 'daemon' | 'terminal';
+        } else if (args[i] === '--verbose') {
+          verbose = true;
+        }
+      }
+
+      const { credentials } = await authAndSetupMachineIfNeeded();
+      await ensureDaemonRunning()
+
+      await runAgy({
+        credentials,
+        startedBy,
+        verbose,
+      });
+    } catch (error) {
+      console.error(chalk.red('Error:'), error instanceof Error ? error.message : 'Unknown error')
+      if (process.env.DEBUG) {
+        console.error(error)
+      }
+      process.exit(1)
+    }
+    return;
   } else if (subcommand === 'logout') {
     // Keep for backward compatibility - redirect to auth logout
     console.log(chalk.yellow(`Note: "${BIN_NAME} logout" is deprecated. Use "${BIN_NAME} auth logout" instead.\n`));
@@ -504,7 +538,7 @@ Conversation history is preserved on the server, but in-flight tool calls are in
       const child = spawnHappyCLI(['daemon', 'start-sync'], {
         detached: true,
         stdio: 'ignore',
-        env: process.env
+        env: sanitizeSessionEnvironment(process.env)
       });
       child.unref();
 
@@ -612,6 +646,10 @@ ${chalk.bold('To clean up runaway processes:')} Use ${chalk.cyan(`${BIN_NAME} do
         unknownArgs.push('--dangerously-skip-permissions')
       } else if (arg === '--model') {
         options.model = args[++i]
+      } else if (arg === '--permission-mode') {
+        options.permissionMode = args[++i] as StartOptions['permissionMode']
+      } else if (arg === '--effort') {
+        options.effort = z.enum(['low', 'medium', 'high', 'xhigh', 'max']).parse(args[++i])
       } else if (arg === '--started-by') {
         options.startedBy = args[++i] as 'daemon' | 'terminal'
       } else if (arg === '--js-runtime') {
@@ -679,7 +717,8 @@ ${chalk.bold('Usage:')}
   ${BIN_NAME} auth              Manage authentication
   ${BIN_NAME} resume            Resume a previous Happy session by Happy session ID
   ${BIN_NAME} codex             Start Codex mode
-  ${BIN_NAME} gemini            Start Gemini mode (ACP)
+  ${BIN_NAME} gemini            Start Gemini mode (ACP) [deprecated — use agy]
+  ${BIN_NAME} agy               Start agy (Antigravity CLI) mode
   ${BIN_NAME} acp               Start a generic ACP-compatible agent
   ${BIN_NAME} connect           Connect AI vendor API keys
   ${BIN_NAME} sandbox           Configure and manage OS-level sandboxing
