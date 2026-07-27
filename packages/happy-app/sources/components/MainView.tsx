@@ -288,6 +288,15 @@ const HeaderRight = React.memo(({
                 <View style={styles.headerActions}>
                     <MobileGlassSurface nativeEffect interactive style={styles.headerActionGlass}>
                         <Pressable
+                            onPress={() => router.navigate('/new')}
+                            style={styles.headerActionButton}
+                            hitSlop={8}
+                        >
+                            <Ionicons name="add-outline" size={24} color={theme.colors.header.tint} />
+                        </Pressable>
+                    </MobileGlassSurface>
+                    <MobileGlassSurface nativeEffect interactive style={styles.headerActionGlass}>
+                        <Pressable
                             onPress={onSearchPress}
                             style={styles.headerActionButton}
                             hitSlop={8}
