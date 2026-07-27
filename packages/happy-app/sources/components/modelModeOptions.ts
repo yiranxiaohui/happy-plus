@@ -96,12 +96,13 @@ export function getGeminiPermissionModes(translate: Translate): PermissionMode[]
 
 export function getClaudeModelModes(): ModelMode[] {
     return [
-        { key: 'default', name: 'Default', description: 'Opus 4.8 with 1M context · Best for everyday, complex tasks' },
-        // Full model ID, not the `opus-5` short alias: the alias is not in the
-        // CLI's alias table yet (`claude --model opus-5` errors on 2.1.199),
-        // while the full ID passes straight through to the API.
-        { key: 'claude-opus-5', name: 'Opus 5', description: 'Opus 5 · Newest Opus generation' },
-        { key: 'opus', name: 'Opus', description: 'Opus 4.8 with 1M context · Best for everyday, complex tasks' },
+        // Mirrors the Claude Code CLI's native `/model` picker (verified against
+        // the model registry in the 2.1.217 bundle). Keys are passed straight
+        // through as the SDK `model` value, so they must be strings the CLI
+        // accepts — note the 1M-context entries use the `<alias>[1m]` suffix
+        // form, which is a real model string, not just a display name.
+        { key: 'default', name: 'Default (recommended)', description: 'Opus 5 with 1M context · Best for everyday, complex tasks' },
+        { key: 'opus[1m]', name: 'Opus (1M context)', description: 'Opus 5 with 1M context · Best for everyday, complex tasks' },
         { key: 'fable', name: 'Fable', description: 'Fable 5 · Most capable for your hardest and longest-running tasks' },
         { key: 'sonnet', name: 'Sonnet', description: 'Sonnet 5 · Efficient for routine tasks' },
         { key: 'haiku', name: 'Haiku', description: 'Haiku 4.5 · Fastest for quick answers' },
