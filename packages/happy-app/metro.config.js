@@ -30,6 +30,19 @@ config.resolver.blockList = [
 // `r.__H` crashes. Pin to the CJS bundles so everyone shares state.
 const preactCjsPath = require.resolve('preact');
 const preactHooksCjsPath = require.resolve('preact/hooks');
+
+// Force the libsodium family to their CJS builds. Their "import" condition
+// points at ESM files whose emscripten loader uses `import.meta` (since
+// libsodium 0.8.4), but Metro emits web bundles as classic (non-module)
+// scripts, so a bundled `import.meta` is a hard SyntaxError that
+// white-screens the whole app.
+const sodiumCjsPaths = {};
+for (const name of ['libsodium', 'libsodium-wrappers', 'libsodium-sumo', 'libsodium-wrappers-sumo']) {
+  try {
+    sodiumCjsPaths[name] = require.resolve(name);
+  } catch { }
+}
+
 const baseResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === 'preact') {
@@ -37,6 +50,9 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   }
   if (moduleName === 'preact/hooks') {
     return { filePath: preactHooksCjsPath, type: 'sourceFile' };
+  }
+  if (sodiumCjsPaths[moduleName]) {
+    return { filePath: sodiumCjsPaths[moduleName], type: 'sourceFile' };
   }
   if (baseResolveRequest) {
     return baseResolveRequest(context, moduleName, platform);
