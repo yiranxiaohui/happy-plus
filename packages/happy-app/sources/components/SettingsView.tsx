@@ -116,11 +116,11 @@ export const SettingsView = React.memo(function SettingsView({
     const { connectTerminal, connectWithUrl, isLoading } = useConnectTerminal();
 
     const handleGitHub = async () => {
-        await openExternalUrl('https://github.com/slopus/happy');
+        await openExternalUrl('https://github.com/yiranxiaohui/happy-plus');
     };
 
     const handleReportIssue = async () => {
-        await openExternalUrl('https://github.com/slopus/happy/issues');
+        await openExternalUrl('https://github.com/yiranxiaohui/happy-plus/issues');
     };
 
     const handleSubscribe = async () => {
@@ -452,7 +452,7 @@ export const SettingsView = React.memo(function SettingsView({
                 <Item
                     title={t('settings.github')}
                     icon={<Ionicons name="logo-github" size={29} color={theme.colors.text} />}
-                    detail="slopus/happy"
+                    detail="yiranxiaohui/happy-plus"
                     onPress={handleGitHub}
                 />
                 <Item
