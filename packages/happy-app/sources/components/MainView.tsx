@@ -20,7 +20,6 @@ import { EmptySessionsTablet } from './EmptySessionsTablet';
 import { SessionsList } from './SessionsList';
 import { TabBar, TabType } from './TabBar';
 import { InboxView } from './InboxView';
-import { HomeDock, MOBILE_HOME_DOCK_CONTENT_INSET } from './HomeDock';
 import { SettingsViewWrapper } from './SettingsViewWrapper';
 import { SessionsListWrapper } from './SessionsListWrapper';
 import { Header } from './navigation/Header';
@@ -34,8 +33,6 @@ import { isUsingCustomServer } from '@/sync/serverConfig';
 import { trackFriendsSearch } from '@/track';
 import { MOBILE_GLASS_HEADER_HEIGHT } from './navigation/headerMetrics';
 import { MobileGlassSurface } from './MobileGlass';
-import { useNewSessionDraft } from '@/hooks/useNewSessionDraft';
-import { useStartSessionFromDraft } from '@/hooks/useStartSessionFromDraft';
 
 interface MainViewProps {
     variant: 'phone' | 'sidebar';
@@ -68,13 +65,6 @@ const styles = StyleSheet.create((theme) => ({
         top: 0,
         left: 0,
         right: 0,
-    },
-    phoneBottomDockOverlay: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 30,
     },
     sidebarContentContainer: {
         flex: 1,
@@ -373,14 +363,12 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     const friendRequests = useFriendRequests();
     const realtimeStatus = useRealtimeStatus();
     const safeArea = useSafeAreaInsets();
-    const { isStarting: isStartingHomeSession, startSession: startHomeSession } = useStartSessionFromDraft();
 
     // Tab state management
     // NOTE: Zen tab removed - the feature never got to a useful state
     const [activeTab, setActiveTab] = React.useState<ActiveTabType>('sessions');
     const [searchQuery, setSearchQuery] = React.useState('');
     const [searchActive, setSearchActive] = React.useState(false);
-    const [homePrompt, setHomePrompt] = React.useState('');
     const [headerBackdropVisible, setHeaderBackdropVisible] = React.useState(false);
     const headerBackdropVisibleRef = React.useRef(false);
     const showHeaderRight = activeTab !== 'settings' || isUsingCustomServer();
@@ -390,22 +378,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
             + MOBILE_GLASS_HEADER_HEIGHT
             + (realtimeStatus !== 'disconnected' ? 32 : 0)
             + 12;
-    const bottomContentInset = Platform.OS === 'web'
-        ? 0
-        : searchActive ? 16 : MOBILE_HOME_DOCK_CONTENT_INSET;
-
-    const handleHomePromptSubmit = React.useCallback(async (): Promise<boolean> => {
-        const prompt = homePrompt.trim();
-        const attachments = useNewSessionDraft.getState().attachments;
-        if (!prompt && attachments.length === 0) {
-            return false;
-        }
-        useNewSessionDraft.getState().setInput(prompt);
-        Keyboard.dismiss();
-        const started = await startHomeSession();
-        if (started) setHomePrompt('');
-        return started;
-    }, [homePrompt, startHomeSession]);
+    const bottomContentInset = Platform.OS === 'web' ? 0 : 16;
 
     const handleSearchPress = React.useCallback(() => {
         setSearchActive((currentValue) => {
@@ -530,23 +503,12 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
                 )}
                 {Platform.OS !== 'web' && phoneHeader}
             </View>
-            {Platform.OS === 'web' ? (
+            {Platform.OS === 'web' && (
                 <TabBar
                     activeTab={activeTab}
                     onTabPress={handleTabPress}
                     inboxBadgeCount={friendRequests.length}
                 />
-            ) : (
-                <View pointerEvents="box-none" style={styles.phoneBottomDockOverlay}>
-                    {!searchActive && (
-                        <HomeDock
-                            prompt={homePrompt}
-                            onPromptChange={setHomePrompt}
-                            onSubmit={handleHomePromptSubmit}
-                            isSubmitting={isStartingHomeSession}
-                        />
-                    )}
-                </View>
             )}
         </View>
     );
