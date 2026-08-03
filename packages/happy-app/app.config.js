@@ -59,6 +59,22 @@ function loadBuildMetadata() {
 
 const buildMetadata = loadBuildMetadata();
 
+// OTA updates. Upstream hardcodes its own EAS project here, which means a fork
+// APK silently downloads upstream's JS bundles over the air and reverts every
+// fork UI change (this actually happened — the removed HomeDock came back).
+// Point updates at the fork's EAS project when EAS_PROJECT_ID is set; with no
+// project of our own, disable OTA entirely so the APK always runs its embedded
+// bundle.
+const easProjectId = process.env.EAS_PROJECT_ID;
+const updatesConfig = easProjectId
+    ? {
+        url: `https://u.expo.dev/${easProjectId}`,
+        requestHeaders: {
+            "expo-channel-name": "production"
+        }
+    }
+    : { enabled: false };
+
 // App version (Android versionName / iOS short version). Driven by APP_VERSION
 // in CI (derived from the release tag, e.g. v1.1.22 -> 1.1.22); falls back to a
 // fixed value for local builds. Without this every APK reported a stale 1.7.0.
@@ -232,12 +248,7 @@ export default {
                 }
             ]
         ],
-        updates: {
-            url: "https://u.expo.dev/4558dd3d-cd5a-47cd-bad9-e591a241cc06",
-            requestHeaders: {
-                "expo-channel-name": "production"
-            }
-        },
+        updates: updatesConfig,
         experiments: {
             typedRoutes: true
         },

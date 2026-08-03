@@ -26,7 +26,11 @@ App 端已用 8s 超时兜底，UI 不会卡死，但推送不可用）。要让
 ### 4. GitHub 仓库配置（yiranxiaohui/happy-plus → Settings）
 
 - **Variables** 新增：`EAS_PROJECT_ID` = 第 3 步的 UUID
-  （`app.config.js` 会用它覆盖上游硬编码的 projectId；为空则回退到上游 id，无害但推送不通）。
+  （`app.config.js` 会用它覆盖上游硬编码的 projectId，同时把 **OTA updates URL**
+  也指向该项目 `https://u.expo.dev/<UUID>`）。
+  - ⚠️ **为空时 OTA 会被整体禁用**（`updates.enabled=false`），APK 只跑内嵌 bundle。
+    这是有意的：早期版本为空时会回退到上游的 EAS 项目，导致 fork APK 静默拉取
+    **上游的 OTA JS bundle**，把 fork 的 UI 改动全部覆盖掉（HomeDock 复活事件）。
 - **Secrets** 新增：`GOOGLE_SERVICES_JSON` = 第 1 步下载文件的**完整 JSON 内容**
   （android-apk workflow 在 prebuild 前会把它写入 `packages/happy-app/google-services.json` 替换桩文件；仅 `APP_ENV=plus` 时生效）。
 
